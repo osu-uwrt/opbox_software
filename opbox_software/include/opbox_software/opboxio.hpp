@@ -177,6 +177,7 @@ namespace opbox {
     {
         public:
         IOBuzzer(bool forceBackup = false);
+        ~IOBuzzer();
         void setState(IOBuzzerState state);
 
         private:

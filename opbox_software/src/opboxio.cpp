@@ -87,6 +87,7 @@ namespace opbox {
                 break;
             case IO_LED_BLINK_TWICE:
                 patt = {
+                    {0, 125ms},
                     {1, 125ms},
                     {0, 125ms},
                     {1, 125ms},
@@ -128,6 +129,12 @@ namespace opbox {
     }
 
 
+    IOBuzzer::~IOBuzzer()
+    {
+        _buzzer.reset();
+    }
+
+
     void IOBuzzer::setState(IOBuzzerState state)
     {
         ActuatorPattern<int> patt = {{0, 1s}};
@@ -144,6 +151,7 @@ namespace opbox {
                 break;
             case IO_BUZZER_CHIRP_TWICE:
                 patt = {
+                    {0, 125ms},
                     {1, 125ms},
                     {0, 125ms},
                     {1, 125ms},
@@ -152,10 +160,10 @@ namespace opbox {
                 break;
             case IO_BUZZER_PANIC:
                 patt = {{1, 500ms}};
-                for(int i = 0; i < 25; i++)
+                for(int i = 0; i < 50; i++)
                 {
-                    patt.push_back({0, 10ms});
-                    patt.push_back({1, 10ms});
+                    patt.push_back({0, 5ms});
+                    patt.push_back({1, 5ms});
                 }
                 break;
             default:
