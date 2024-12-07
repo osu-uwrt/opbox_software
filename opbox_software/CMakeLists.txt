@@ -1,9 +1,6 @@
-cmake_minimum_required(VERSION 3.9)
-project(opbox_software)
-
-# GoogleTest requires at least C++14
-set(CMAKE_CXX_STANDARD 14)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
+#
+# Opbox Software compilation
+#
 
 #
 # Compile src files
@@ -15,7 +12,7 @@ target_include_directories(opbox_lib PUBLIC include)
 
 add_executable(opbox_main src/main.cpp)
 target_include_directories(opbox_main PUBLIC include)
-target_link_libraries(opbox_main opbox_lib)
+target_link_libraries(opbox_main opbox_lib serial_library)
 
 #
 # Compile test files

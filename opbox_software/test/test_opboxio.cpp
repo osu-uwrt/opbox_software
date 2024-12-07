@@ -1,6 +1,6 @@
+#include "opbox_software/opboxio.hpp"
 #include <gtest/gtest.h>
 #include <cstdio>
-#include "opboxio.hpp"
 
 TEST(TestOpboxIO, TestInFile)
 {
