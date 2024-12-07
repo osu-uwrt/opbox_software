@@ -7,6 +7,7 @@
 #include <vector>
 #include <thread>
 #include <functional>
+#include <memory>
 
 /**
  * Opbox IO interfaces
@@ -37,8 +38,8 @@ namespace opbox {
     {
         public:
         OutFile(const std::string& path);
-        bool appendToFile(const std::string& data);
-        bool replaceFile(const std::string& data);
+        void appendToFile(const std::string& data);
+        void replaceFile(const std::string& data);
 
         private:
         const std::string path;
@@ -47,7 +48,6 @@ namespace opbox {
 
     template<typename T>
     using ActuatorPattern = std::vector<std::pair<T, std::chrono::milliseconds>>;
-
 
     template<typename T>
     class IOActuator : public OutFile
@@ -88,13 +88,9 @@ namespace opbox {
         private:
         void waitUntilTimeoutOrThreadKilled(std::chrono::milliseconds ms)
         {
-            auto start = std::chrono::high_resolution_clock::now();
+            auto start = std::chrono::system_clock::now();
             
-            while(
-                std::chrono::duration_cast<std::chrono::milliseconds>(
-                    std::chrono::high_resolution_clock::now() - start) <= ms
-
-                && _threadRunning)
+            while(std::chrono::system_clock::now() - start <= ms && _threadRunning)
             {
                 std::this_thread::sleep_for(5ms);
             }
@@ -103,7 +99,7 @@ namespace opbox {
 
         void threadFunc()
         {
-            OPBOX_LOG_DEBUG("Thread starting (%s)", _path);
+            OPBOX_LOG_DEBUG("Thread starting (%s)", _path.c_str());
 
             while(_threadRunning)
             {
@@ -128,12 +124,12 @@ namespace opbox {
             }
 
             setState(_defaultState);
-            OPBOX_LOG_DEBUG("Thread ending (%s)", _path);
+            OPBOX_LOG_DEBUG("Thread ending (%s)", _path.c_str());
         }
 
         void setState(T newState)
         {
-            OPBOX_LOG_DEBUG("Setting state of (%s) to %d", _path, newState);
+            OPBOX_LOG_DEBUG("Setting state of (%s) to %d", _path.c_str(), newState);
             _state = newState;
             _memberMutex.lock();
             replaceFile(std::to_string(_state));
@@ -147,5 +143,43 @@ namespace opbox {
         std::thread         _thread;
         ActuatorPattern<T>  _activePattern;
         T                   _state;
+    };
+
+
+    enum IOLedState
+    {
+        IO_LED_OFF,
+        IO_LED_ON,
+        IO_LED_BLINK_TWICE,
+        IO_LED_BLINKING
+    };
+
+    class IOLed
+    {
+        public:
+        IOLed(bool forceBackup = false);
+        void setState(IOLedState state);
+
+        private:
+        std::shared_ptr<IOActuator<int>> _led;
+    };
+
+
+    enum IOBuzzerState
+    {
+        IO_BUZZER_OFF,
+        IO_BUZZER_CHIRP,
+        IO_BUZZER_CHIRP_TWICE,
+        IO_BUZZER_PANIC
+    };
+
+    class IOBuzzer
+    {
+        public:
+        IOBuzzer(bool forceBackup = false);
+        void setState(IOBuzzerState state);
+
+        private:
+        std::shared_ptr<IOActuator<int>> _buzzer;
     };
 }

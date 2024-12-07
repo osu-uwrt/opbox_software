@@ -48,7 +48,162 @@ TEST(TestOpboxIO, TestOutFile)
     ASSERT_EQ(f.readFile(), OUTFILE_TEST_DATA);
 }
 
-TEST(TestOpboxIO, TestIOActuator)
+TEST(TestOpboxIO, TestIOActuatorInt)
 {
-    GTEST_SKIP();
+    opbox::IOActuator<int> act(OUTFILE_TEST_FILE, 0);
+    opbox::ActuatorPattern<int> patt = {
+        {1, 400ms},
+        {0, 100ms},
+        {1, 200ms},
+        {0, 100ms}
+    };
+
+    act.setPattern(patt);
+
+    opbox::InFile f(OUTFILE_TEST_FILE);
+    std::this_thread::sleep_for(25ms);
+    ASSERT_EQ(f.readFile(), "1");
+    ASSERT_TRUE(act.state());
+    std::this_thread::sleep_for(400ms);
+    ASSERT_EQ(f.readFile(), "0");
+    ASSERT_FALSE(act.state());
+    std::this_thread::sleep_for(100ms);
+    ASSERT_EQ(f.readFile(), "1");
+    ASSERT_TRUE(act.state());
+    std::this_thread::sleep_for(200ms);
+    ASSERT_EQ(f.readFile(), "0");
+    ASSERT_FALSE(act.state());
+    std::this_thread::sleep_for(100ms);
+    ASSERT_EQ(f.readFile(), "1");
+    ASSERT_TRUE(act.state());
+}
+
+TEST(TestOpboxIO, TestIOLedOff)
+{
+    opbox::IOLed led(true);
+    led.setState(opbox::IOLedState::IO_LED_OFF);
+    opbox::InFile f(OPBOX_IO_BACKUP_LED_FILE);
+
+    //check for 2 seconds that file has a 0 in it
+    std::this_thread::sleep_for(100ms);
+    auto start = std::chrono::system_clock::now();
+    while(std::chrono::system_clock::now() - start < 2s)
+    {
+        std::this_thread::sleep_for(10ms);
+        ASSERT_EQ(f.readFile(), "0");
+    }
+}
+
+TEST(TestOpboxIO, TestIOLedOn)
+{
+    opbox::IOLed led(true);
+    led.setState(opbox::IOLedState::IO_LED_ON);
+    opbox::InFile f(OPBOX_IO_BACKUP_LED_FILE);
+
+    //check for 2 seconds that file has a 1 in it
+    std::this_thread::sleep_for(100ms);
+    auto start = std::chrono::system_clock::now();
+    while(std::chrono::system_clock::now() - start < 2s)
+    {
+        std::this_thread::sleep_for(300ms);
+        ASSERT_EQ(f.readFile(), "1");
+    }
+}
+
+TEST(TestOpboxIO, TestIOLedBlinkTwice)
+{
+    opbox::IOLed led(true);
+    led.setState(opbox::IOLedState::IO_LED_BLINK_TWICE);
+    opbox::InFile f(OPBOX_IO_BACKUP_LED_FILE);
+
+    std::this_thread::sleep_for(25ms);
+    ASSERT_EQ(f.readFile(), "1");
+    std::this_thread::sleep_for(125ms);
+    ASSERT_EQ(f.readFile(), "0");
+    std::this_thread::sleep_for(125ms);
+    ASSERT_EQ(f.readFile(), "1");
+    std::this_thread::sleep_for(125ms);
+    
+    //check for 2 seconds that file has a 0 in it
+    auto start = std::chrono::system_clock::now();
+    while(std::chrono::system_clock::now() - start < 2s)
+    {
+        std::this_thread::sleep_for(300ms);
+        ASSERT_EQ(f.readFile(), "0");
+    }
+}
+
+TEST(TestOpboxIO, TestIOLedBlinking)
+{
+    opbox::IOLed led(true);
+    led.setState(opbox::IOLedState::IO_LED_BLINKING);
+    opbox::InFile f(OPBOX_IO_BACKUP_LED_FILE);
+
+    std::this_thread::sleep_for(125ms);
+    ASSERT_EQ(f.readFile(), "1");
+    auto start = std::chrono::system_clock::now();
+    while(std::chrono::system_clock::now() - start < 2s)
+    {
+        std::this_thread::sleep_for(250ms);
+        ASSERT_EQ(f.readFile(), "0");
+        std::this_thread::sleep_for(250ms);
+        ASSERT_EQ(f.readFile(), "1");
+    }
+}
+
+TEST(TestOpboxIO, TestIOBuzzerOff)
+{
+    opbox::IOBuzzer buzzer(true);
+    buzzer.setState(opbox::IOBuzzerState::IO_BUZZER_OFF);
+    opbox::InFile f(OPBOX_IO_BACKUP_BUZZER_FILE);
+
+    std::this_thread::sleep_for(25ms);
+
+    //check for 2 seconds that file has a 0 in it
+    auto start = std::chrono::system_clock::now();
+    while(std::chrono::system_clock::now() - start < 2s)
+    {
+        std::this_thread::sleep_for(300ms);
+        ASSERT_EQ(f.readFile(), "0");
+    }
+}
+
+TEST(TestOpboxIO, TestIOBuzzerChirp)
+{
+    opbox::IOBuzzer buzzer(true);
+    buzzer.setState(opbox::IOBuzzerState::IO_BUZZER_CHIRP);
+    opbox::InFile f(OPBOX_IO_BACKUP_BUZZER_FILE);
+
+    std::this_thread::sleep_for(25ms);
+    ASSERT_EQ(f.readFile(), "1");
+
+    //check for 2 seconds that file has a 0 in it
+    auto start = std::chrono::system_clock::now();
+    while(std::chrono::system_clock::now() - start < 2s)
+    {
+        std::this_thread::sleep_for(300ms);
+        ASSERT_EQ(f.readFile(), "0");
+    }
+}
+
+TEST(TestOpboxIO, TestIOBuzzerChirpTwice)
+{
+    opbox::IOBuzzer buzzer(true);
+    buzzer.setState(opbox::IOBuzzerState::IO_BUZZER_CHIRP_TWICE);
+    opbox::InFile f(OPBOX_IO_BACKUP_BUZZER_FILE);
+
+    std::this_thread::sleep_for(25ms);
+    ASSERT_EQ(f.readFile(), "1");
+    std::this_thread::sleep_for(125ms);
+    ASSERT_EQ(f.readFile(), "0");
+    std::this_thread::sleep_for(125ms);
+    ASSERT_EQ(f.readFile(), "1");
+
+    //check for 2 seconds that file has a 0 in it
+    auto start = std::chrono::system_clock::now();
+    while(std::chrono::system_clock::now() - start < 2s)
+    {
+        std::this_thread::sleep_for(300ms);
+        ASSERT_EQ(f.readFile(), "0");
+    }
 }
