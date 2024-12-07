@@ -1,0 +1,6 @@
+[submodule "dev"]
+	path = dev
+	url = https://github.com/BTK203/serial_library
+[submodule "serial_library"]
+	path = serial_library
+	url = https://github.com/BTK203/serial_library
