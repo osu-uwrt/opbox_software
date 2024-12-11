@@ -3,13 +3,10 @@
 
 int main(int argc, char **argv)
 {
-    opbox::IOBuzzer buzzer;
-    buzzer.setState(opbox::IOBuzzerState::IO_BUZZER_PANIC);
-
     opbox::IOLed led;
-    led.setState(opbox::IOLedState::IO_LED_BLINK_TWICE);
+    led.setState(opbox::IOLedState::IO_LED_BLINKING);
 
-    std::this_thread::sleep_for(2s);
+    std::this_thread::sleep_for(2min);
     
     return 0;
 }

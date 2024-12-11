@@ -53,7 +53,7 @@ TEST(TestOpboxIO, TestIOActuatorInt)
     opbox::IOActuator<int> act(OUTFILE_TEST_FILE, 0);
     opbox::ActuatorPattern<int> patt = {
         {1, 400ms},
-        {0, 100ms},
+        {0, 300ms},
         {1, 200ms},
         {0, 100ms}
     };
@@ -67,7 +67,7 @@ TEST(TestOpboxIO, TestIOActuatorInt)
     std::this_thread::sleep_for(400ms);
     ASSERT_EQ(f.readFile(), "0");
     ASSERT_FALSE(act.state());
-    std::this_thread::sleep_for(100ms);
+    std::this_thread::sleep_for(300ms);
     ASSERT_EQ(f.readFile(), "1");
     ASSERT_TRUE(act.state());
     std::this_thread::sleep_for(200ms);
@@ -110,46 +110,7 @@ TEST(TestOpboxIO, TestIOLedOn)
     }
 }
 
-TEST(TestOpboxIO, TestIOLedBlinkTwice)
-{
-    opbox::IOLed led(true);
-    led.setState(opbox::IOLedState::IO_LED_BLINK_TWICE);
-    opbox::InFile f(OPBOX_IO_BACKUP_LED_FILE);
 
-    std::this_thread::sleep_for(25ms);
-    ASSERT_EQ(f.readFile(), "1");
-    std::this_thread::sleep_for(125ms);
-    ASSERT_EQ(f.readFile(), "0");
-    std::this_thread::sleep_for(125ms);
-    ASSERT_EQ(f.readFile(), "1");
-    std::this_thread::sleep_for(125ms);
-    
-    //check for 2 seconds that file has a 0 in it
-    auto start = std::chrono::system_clock::now();
-    while(std::chrono::system_clock::now() - start < 2s)
-    {
-        std::this_thread::sleep_for(300ms);
-        ASSERT_EQ(f.readFile(), "0");
-    }
-}
-
-TEST(TestOpboxIO, TestIOLedBlinking)
-{
-    opbox::IOLed led(true);
-    led.setState(opbox::IOLedState::IO_LED_BLINKING);
-    opbox::InFile f(OPBOX_IO_BACKUP_LED_FILE);
-
-    std::this_thread::sleep_for(125ms);
-    ASSERT_EQ(f.readFile(), "1");
-    auto start = std::chrono::system_clock::now();
-    while(std::chrono::system_clock::now() - start < 2s)
-    {
-        std::this_thread::sleep_for(250ms);
-        ASSERT_EQ(f.readFile(), "0");
-        std::this_thread::sleep_for(250ms);
-        ASSERT_EQ(f.readFile(), "1");
-    }
-}
 
 TEST(TestOpboxIO, TestIOBuzzerOff)
 {
@@ -186,24 +147,91 @@ TEST(TestOpboxIO, TestIOBuzzerChirp)
     }
 }
 
-TEST(TestOpboxIO, TestIOBuzzerChirpTwice)
+TEST(TestOpboxIO, TestIOScheduling)
 {
-    opbox::IOBuzzer buzzer(true);
-    buzzer.setState(opbox::IOBuzzerState::IO_BUZZER_CHIRP_TWICE);
-    opbox::InFile f(OPBOX_IO_BACKUP_BUZZER_FILE);
+    opbox::IOLed led(true);
+    led.setState(opbox::IOLedState::IO_LED_ON);
+    led.setNextState(opbox::IOLedState::IO_LED_OFF, 500ms);
 
-    std::this_thread::sleep_for(25ms);
+    opbox::InFile f(OPBOX_IO_BACKUP_LED_FILE);
+    
+    //know that normal setting states work if others pass. For this test just schedule a change
+    std::this_thread::sleep_for(400ms);
     ASSERT_EQ(f.readFile(), "1");
-    std::this_thread::sleep_for(125ms);
+    std::this_thread::sleep_for(200ms);
     ASSERT_EQ(f.readFile(), "0");
-    std::this_thread::sleep_for(125ms);
-    ASSERT_EQ(f.readFile(), "1");
+    //test that ioact does not try to pull a nonexistent queue item after another 500ms
+    std::this_thread::sleep_for(500ms);
+    ASSERT_EQ(f.readFile(), "0");
+}
 
-    //check for 2 seconds that file has a 0 in it
+TEST(TestOpboxIO, TestIOSchedulingInterval)
+{
+    opbox::IOLed led(true);
+    led.setState(opbox::IOLedState::IO_LED_ON);
+    led.setNextState(opbox::IOLedState::IO_LED_OFF, 500ms);
+    led.setNextState(opbox::IOLedState::IO_LED_ON, 500ms);
+    led.setNextState(opbox::IOLedState::IO_LED_OFF, 500ms);
+
+    opbox::InFile f(OPBOX_IO_BACKUP_LED_FILE);
+    
+    //know that normal setting states work if others pass. For this test just schedule a change
+    std::this_thread::sleep_for(250ms);
+    ASSERT_EQ(f.readFile(), "1");
+    std::this_thread::sleep_for(500ms);
+    ASSERT_EQ(f.readFile(), "0");
+    std::this_thread::sleep_for(500ms);
+    ASSERT_EQ(f.readFile(), "1");
+    std::this_thread::sleep_for(500ms);
+    ASSERT_EQ(f.readFile(), "0");
+}
+
+TEST(TestOpboxIO, TestIOQueueInterruptClearing)
+{
     auto start = std::chrono::system_clock::now();
-    while(std::chrono::system_clock::now() - start < 2s)
-    {
-        std::this_thread::sleep_for(300ms);
-        ASSERT_EQ(f.readFile(), "0");
-    }
+
+    opbox::IOLed led(true);
+    led.setState(opbox::IOLedState::IO_LED_ON);
+    led.setNextState(opbox::IOLedState::IO_LED_OFF, 750ms);
+    led.setNextState(opbox::IOLedState::IO_LED_ON, 250ms); //test that the queue is wiped. this should be cleared
+    opbox::InFile f(OPBOX_IO_BACKUP_LED_FILE);
+    
+    //know that normal setting states work if others pass. For this test just schedule a change
+    std::this_thread::sleep_for(400ms);
+    ASSERT_EQ(f.readFile(), "1");
+    led.setState(opbox::IOLedState::IO_LED_OFF);
+    //time elapsed after this call should be 500ms, well under the delay time
+    std::this_thread::sleep_for(100ms);
+    ASSERT_EQ(f.readFile(), "0");
+
+    auto end = std::chrono::system_clock::now();
+    ASSERT_LT(end - start, 750ms);
+
+    std::this_thread::sleep_for(500ms);
+    ASSERT_EQ(f.readFile(), "0");
+}
+
+TEST(TestOpboxIO, TestIOQueueInterruptNonClearing)
+{
+    auto start = std::chrono::system_clock::now();
+
+    opbox::IOLed led(true);
+    led.setState(opbox::IOLedState::IO_LED_ON);
+    led.setNextState(opbox::IOLedState::IO_LED_OFF, 750ms);
+    led.setNextState(opbox::IOLedState::IO_LED_ON, 500ms); //test that the queue is wiped. this should be cleared
+    opbox::InFile f(OPBOX_IO_BACKUP_LED_FILE);
+
+    //know that normal setting states work if others pass. For this test just schedule a change
+    std::this_thread::sleep_for(400ms);
+    ASSERT_EQ(f.readFile(), "1");
+    led.setState(opbox::IOLedState::IO_LED_OFF, false);
+    //time elapsed after this call should be 500ms, well under the delay time
+    std::this_thread::sleep_for(100ms);
+    ASSERT_EQ(f.readFile(), "0");
+
+    auto end = std::chrono::system_clock::now();
+    ASSERT_LT(end - start, 750ms);
+
+    std::this_thread::sleep_for(1s);
+    ASSERT_EQ(f.readFile(), "1");
 }

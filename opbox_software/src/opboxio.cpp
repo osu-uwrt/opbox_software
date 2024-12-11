@@ -58,23 +58,10 @@ namespace opbox {
     //
 
     IOLed::IOLed(bool forceBackup)
-    {
-        std::string targetFile = OPBOX_IO_BACKUP_LED_FILE;
-        if(!forceBackup)
-        {
-            // test existence of default file. If none exists, fall back to the backup
-            InFile f(OPBOX_IO_PRIMARY_LED_FILE);
-            if(f.exists())
-            {
-                targetFile = OPBOX_IO_PRIMARY_LED_FILE;
-            }
-        }
-
-        _led = std::make_shared<IOActuator<int>>(targetFile, 0);
-    }
+     : IOController(0, OPBOX_IO_PRIMARY_LED_FILE, OPBOX_IO_BACKUP_LED_FILE, forceBackup) { }
 
 
-    void IOLed::setState(IOLedState state)
+    ActuatorPattern<int> IOLed::getStatePattern(const IOLedState& state) const
     {
         ActuatorPattern<int> patt = {{0, 1s}};
 
@@ -106,7 +93,7 @@ namespace opbox {
                 OPBOX_LOG_ERROR("IOLed state %d is not supported yet!", state);
         }
 
-        _led->setPattern(patt);
+        return patt;
     }
 
     //
@@ -114,28 +101,10 @@ namespace opbox {
     //
 
     IOBuzzer::IOBuzzer(bool forceBackup)
-    {
-        std::string targetFile = OPBOX_IO_BACKUP_BUZZER_FILE;
-        if(!forceBackup)
-        {
-            InFile f(OPBOX_IO_PRIMARY_BUZZER_FILE);
-            if(f.exists())
-            {
-                targetFile = OPBOX_IO_PRIMARY_BUZZER_FILE;
-            }
-        }
-
-        _buzzer = std::make_shared<IOActuator<int>>(targetFile, 0);
-    }
+     : IOController(0, OPBOX_IO_PRIMARY_BUZZER_FILE, OPBOX_IO_BACKUP_BUZZER_FILE, forceBackup) { }
 
 
-    IOBuzzer::~IOBuzzer()
-    {
-        _buzzer.reset();
-    }
-
-
-    void IOBuzzer::setState(IOBuzzerState state)
+    ActuatorPattern<int> IOBuzzer::getStatePattern(const IOBuzzerState& state) const
     {
         ActuatorPattern<int> patt = {{0, 1s}};
 
@@ -170,6 +139,6 @@ namespace opbox {
                 OPBOX_LOG_ERROR("IOBuzzer state %d is not supported yet!", state);
         };
 
-        _buzzer->setPattern(patt);
+        return patt;
     }
 }
