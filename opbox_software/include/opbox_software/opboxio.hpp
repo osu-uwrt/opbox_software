@@ -9,6 +9,8 @@
 #include <thread>
 #include <functional>
 #include <memory>
+#include <fstream>
+#include <sstream>
 
 /**
  * Opbox IO interfaces
@@ -18,33 +20,221 @@ using namespace std::chrono_literals;
 
 namespace opbox {
 
+    class NamedObject
+    {
+        public:
+        virtual std::string name() const = 0;
+    };
+
+    template<typename T>
+    class GenericInput : public NamedObject
+    {
+        public:
+        virtual T read() = 0;
+    };
+
+    template<typename T>
+    class GenericOutput : public NamedObject
+    {
+        public:
+        virtual void write(const T& t) = 0;
+    };
+
+    template<typename T>
+    using StringConversionFunc = std::function<T(const std::string&)>;
+
     /**
      * For reading short files for sensing purposes
      */
-    class InFile
+    template<typename T>
+    class InFile : public GenericInput<T>
     {
         public:
-        InFile(const std::string& path);
-        bool exists() const;
-        std::string readFile();
+        InFile(const std::string& path, StringConversionFunc<T> func)
+         : cvtToString(func),
+           path(path) { }
 
-        private:
+
+        bool exists() const 
+        {
+            std::ifstream f(path);
+            bool e = f.good();
+            f.close();
+            return e;
+        }
+
+        std::string name() const override
+        {
+            return path;
+        }
+
+        T read() override
+        {
+            std::ifstream f(path);
+            std::stringstream s;
+            s << f.rdbuf();
+            f.close();
+            return cvtToString(s.str());
+        }
+
+        protected:
         const std::string path;
+        StringConversionFunc<T> cvtToString;
+    };
+
+    static std::string cvtStringToStringFxn(const std::string& s)
+    {
+        return s;
+    }
+
+    class StringInFile : public InFile<std::string>
+    {
+        public:
+        StringInFile(const std::string& path)
+         : InFile<std::string>(path, cvtStringToStringFxn) { }
     };
 
     /**
      * For writing short files for sensing purposes
      */
-    class OutFile
+    template<typename T>
+    class OutFile : public GenericOutput<T>
     {
         public:
-        OutFile(const std::string& path);
-        void appendToFile(const std::string& data);
-        void replaceFile(const std::string& data);
+        OutFile(const std::string& path)
+         : path(path) { }
+
+
+        std::string name() const
+        {
+            return path;
+        }
+
+
+        void append(const T& data)
+        {
+            std::ofstream f(path, std::ofstream::app);
+            f << data;
+            f.close();
+        }
+
+
+        void write(const T& data) override
+        {
+            std::ofstream f(path, std::ofstream::trunc);
+            f << data;
+            f.close();
+        }
 
         private:
         const std::string path;
     };
+
+
+    class StringOutFile : public OutFile<std::string>
+    {
+        public:
+        StringOutFile(const std::string& path)
+         : OutFile<std::string>(path) { }
+    };
+
+    // #if defined ()     use to detect cmake flag indicating pigpio library present
+    // #include <pigpio.h>
+    // #define USE_REAL_GPIO 1
+    // #else
+    #define USE_REAL_GPIO 0
+    // #endif
+
+    enum GPIODirection
+    {
+        INPUT,
+        OUTPUT
+    };
+
+    enum GPIOState
+    {
+        LOW,
+        HIGH
+    };
+
+    enum GPIOPullUpDown
+    {
+        PULLUP,
+        PULLDOWN,
+        NONE
+    };
+
+    class GPIO
+    {
+        public:
+        static bool initialize();
+        static bool isInitialized();
+
+        GPIO(const short pin,
+            GPIODirection direction,
+            GPIOPullUpDown pud = GPIOPullUpDown::NONE,
+            GPIOState initialState = GPIOState::LOW,
+            bool forceFakeGpio = false,
+            const std::string& fakeGpioFile = "./test_gpio");
+
+        const short pin() const;
+        const GPIOPullUpDown getPud() const;
+        const GPIODirection direction() const;
+        GPIOState state();
+        void setState(const GPIOState& state);
+
+        protected:
+        static bool _initialized;
+        const short _pin;
+        const GPIODirection _direction;
+        const GPIOPullUpDown _pud;
+        const bool _forceFakeGpio;
+        const std::string _fakeGpioFile;
+        GPIOState _state;
+    };
+
+    class GPIOError : public std::runtime_error
+    {
+        public:
+        GPIOError(const char* what, const GPIO& gpio)
+         : std::runtime_error(what),
+           gpio(gpio) { }
+        
+        const GPIO offender()
+        {
+            return gpio;
+        }
+
+        private:
+        const GPIO& gpio;
+    };
+
+
+    class GPIOInput : public GenericInput<bool>, public GPIO
+    {
+        public:
+        GPIOInput(const short pin,
+                bool forceFakeGpio = false,
+                const std::string& fakeGpioFile = "./test_gpio")
+         : GPIO(pin, GPIODirection::INPUT, GPIOPullUpDown::PULLUP, GPIOState::LOW, forceFakeGpio, fakeGpioFile) { }
+        
+        std::string name() const override;
+        bool read() override;
+    };
+
+
+    class GPIOOutput : public GenericOutput<bool>, public GPIO
+    {
+        public:
+        GPIOOutput(const short pin,
+                bool forceFakeGpio = false,
+                const std::string& fakeGpioFile = "./test_gpio")
+         : GPIO(pin, GPIODirection::OUTPUT, GPIOPullUpDown::NONE, GPIOState::LOW, forceFakeGpio, fakeGpioFile) { }
+        
+        std::string name() const override;
+        void write(const bool& s) override;
+    };
+
 
     template<typename T>
     using ActuatorInterval = std::pair<T, std::chrono::milliseconds>;
@@ -56,18 +246,17 @@ namespace opbox {
     using ActuatorQueue = std::deque<ActuatorInterval<ActuatorPattern<T>>>;
 
     template<typename T>
-    class IOActuator : public OutFile
+    class IOActuator
     {
         public:
-        IOActuator(const std::string& path, const T& initialState)
-         : OutFile(path),
-           _path(path),
-           _defaultState(initialState),
+        IOActuator(std::unique_ptr<GenericOutput<T>> output, const T& initialState)
+         : _defaultState(initialState),
            _state(initialState),
            _threadRunning(true),
-           _thread(std::bind(&IOActuator::threadFunc, this))
+           _thread(std::bind(&IOActuator::threadFunc, this)),
+           _output(std::move(output))
         {
-            replaceFile(std::to_string(initialState));
+            _output->write(initialState);
         }
 
 
@@ -145,7 +334,7 @@ namespace opbox {
         void threadFunc()
         {
             _queuePatternStartTime = std::chrono::system_clock::now();
-            OPBOX_LOG_DEBUG("Thread starting (%s)", _path.c_str());
+            OPBOX_LOG_DEBUG("Thread starting (%s)", _output->name().c_str());
 
             while(_threadRunning)
             {
@@ -194,20 +383,18 @@ namespace opbox {
             }
 
             setState(_defaultState);
-            OPBOX_LOG_DEBUG("Thread ending (%s)", _path.c_str());
+            OPBOX_LOG_DEBUG("Thread ending (%s)", _output->name().c_str());
         }
 
         void setState(const T& newState)
         {
-            OPBOX_LOG_DEBUG("Setting state of (%s) to %d", _path.c_str(), newState);
+            OPBOX_LOG_DEBUG("Setting state of (%s) to %d", _output->name().c_str(), newState);
             _memberMutex.lock();
             _state = newState;
-            std::string strState = std::to_string(_state);
+            _output->write(_state);
             _memberMutex.unlock();
-            replaceFile(strState);
         }
 
-        const std::string   _path;
         const T             _defaultState;
         bool                _threadRunning;
         std::mutex          _memberMutex; // mutex for all member variables
@@ -216,6 +403,7 @@ namespace opbox {
         ActuatorQueue<T>    _queue;
         T                   _state;
         
+        std::unique_ptr<GenericOutput<T>> _output;
         std::chrono::time_point<std::chrono::system_clock> _queuePatternStartTime;
     };
 
@@ -224,12 +412,14 @@ namespace opbox {
     class IOController
     {
         public:
-        IOController(const IOType& defaultState, const std::string& primaryPath, const std::string& backupPath = "", bool forceBackup = false)
+
+        template<typename T>
+        static std::unique_ptr<IOActuator<T>> makeFileActuator(const T& defaultState, const std::string& primaryPath, const std::string& backupPath, bool forceBackup = false)
         {
             std::string targetPath = backupPath;
             if(!forceBackup)
             {
-                InFile f(primaryPath);
+                StringInFile f(primaryPath);
                 if(f.exists())
                 {
                     targetPath = primaryPath;
@@ -242,8 +432,12 @@ namespace opbox {
                 OPBOX_LOG_DEBUG("IOController overriding primary path %s for backup path %s", primaryPath.c_str(), backupPath.c_str());
             }
 
-            _actuator = std::make_unique<IOActuator<IOType>>(targetPath, defaultState);
+            return std::make_unique<IOActuator<T>>(std::make_unique<OutFile<T>>(targetPath), defaultState);
         }
+
+
+        IOController(std::unique_ptr<IOActuator<IOType>> actuator)
+         : _actuator(std::move(actuator)) { }
 
         void setState(const StateType& state, bool clearQueue = true)
         {
