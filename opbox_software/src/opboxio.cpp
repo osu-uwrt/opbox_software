@@ -6,10 +6,6 @@ namespace opbox {
     // IOLed
     //
 
-    IOLed::IOLed(bool forceBackup)
-     : IOController(makeFileActuator<int>(0, OPBOX_IO_PRIMARY_LED_FILE, OPBOX_IO_BACKUP_LED_FILE, forceBackup)) { }
-
-
     ActuatorPattern<int> IOLed::getStatePattern(const IOLedState& state) const
     {
         ActuatorPattern<int> patt = {{0, 1s}};
@@ -30,12 +26,16 @@ namespace opbox {
                     {0, 24h}
                 };
                 break;
-            case IO_LED_BLINKING:
+            case IO_LED_FAST_BLINK:
                 patt = {
-                    {1, 250ms},
                     {0, 250ms},
                     {1, 250ms},
-                    {0, 250ms}
+                };
+                break;
+            case IO_LED_SLOW_BLINK:
+                patt = {
+                    {0, 1s},
+                    {1, 1s}
                 };
                 break;
             default:
@@ -204,7 +204,7 @@ namespace opbox {
     }
 
     //
-    // GPIO Input
+    // GPIOInput
     //
 
     std::string GPIOInput::name() const
@@ -213,13 +213,13 @@ namespace opbox {
     }
 
 
-    bool GPIOInput::read()
+    int GPIOInput::read()
     {
-        return state() == GPIOState::HIGH;
+        return (int) state();
     }
 
     //
-    // GPIO Output
+    // GPIOOutput
     //
 
     std::string GPIOOutput::name() const
@@ -228,8 +228,41 @@ namespace opbox {
     }
 
 
-    void GPIOOutput::write(const bool& s)
+    void GPIOOutput::write(const int& s)
     {
-        setState(s ? GPIOState::HIGH : GPIOState::LOW);
+        setState((GPIOState) s);
+    }
+
+    //
+    // KillSwitchLeds
+    //
+    KillSwitchLeds::KillSwitchLeds(int greenPin, int yellowPin, int redPin, bool forceFakeGpio)
+     : _red(redPin, GPIOState::LOW, forceFakeGpio, "./red_led"),
+       _yellow(yellowPin, GPIOState::LOW, forceFakeGpio, "./yellow_led"),
+       _green(greenPin, GPIOState::LOW, forceFakeGpio, "./green_led") { }
+
+    void KillSwitchLeds::setAllStates(IOLedState state)
+    {
+        _red.setState(state);
+        _yellow.setState(state);
+        _green.setState(state);
+    }
+
+
+    void KillSwitchLeds::setRedState(IOLedState state)
+    {
+        _red.setState(state);
+    }
+
+
+    void KillSwitchLeds::setYellowState(IOLedState state)
+    {
+        _yellow.setState(state);
+    }
+
+
+    void KillSwitchLeds::setGreenState(IOLedState state)
+    {
+        _green.setState(state);
     }
 }

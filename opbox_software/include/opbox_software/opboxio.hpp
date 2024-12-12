@@ -210,7 +210,7 @@ namespace opbox {
     };
 
 
-    class GPIOInput : public GenericInput<bool>, public GPIO
+    class GPIOInput : public GenericInput<int>, public GPIO
     {
         public:
         GPIOInput(const short pin,
@@ -219,11 +219,11 @@ namespace opbox {
          : GPIO(pin, GPIODirection::INPUT, GPIOPullUpDown::PULLUP, GPIOState::LOW, forceFakeGpio, fakeGpioFile) { }
         
         std::string name() const override;
-        bool read() override;
+        int read() override;
     };
 
 
-    class GPIOOutput : public GenericOutput<bool>, public GPIO
+    class GPIOOutput : public GenericOutput<int>, public GPIO
     {
         public:
         GPIOOutput(const short pin,
@@ -232,7 +232,7 @@ namespace opbox {
          : GPIO(pin, GPIODirection::OUTPUT, GPIOPullUpDown::NONE, GPIOState::LOW, forceFakeGpio, fakeGpioFile) { }
         
         std::string name() const override;
-        void write(const bool& s) override;
+        void write(const int& s) override;
     };
 
 
@@ -262,7 +262,9 @@ namespace opbox {
 
         ~IOActuator()
         {
+            _memberMutex.lock();
             _threadRunning = false;
+            _memberMutex.unlock();
             _thread.join();
         }
 
@@ -407,6 +409,65 @@ namespace opbox {
         std::chrono::time_point<std::chrono::system_clock> _queuePatternStartTime;
     };
 
+    template<typename T>
+    using InputStateChangedCallback = std::function<void(const T&)>; 
+
+    template<typename T>
+    class IOSensor
+    {
+        public:
+        IOSensor(std::unique_ptr<GenericInput<T>> input, InputStateChangedCallback<T> onStateChange)
+         : _threadRunning(true),
+           _input(std::move(input)),
+           _onStateChange(onStateChange),
+           _thread(std::bind(&IOSensor::threadFunc, this)) { }
+        
+        ~IOSensor()
+        {
+            _memberMutex.lock();
+            _threadRunning = false;
+            _memberMutex.unlock();
+            _thread.join();
+        }
+
+        T state()
+        {
+            _memberMutex.lock();
+            T s = _input->read();
+            _memberMutex.unlock();
+            return s;
+        }
+
+        private:
+        void threadFunc()
+        {
+            _memberMutex.lock();
+            T state = _input->read(),
+              newState = state;
+            _memberMutex.unlock();
+
+            while(_threadRunning)
+            {
+                _memberMutex.lock();
+                newState = _input->read();
+                _memberMutex.unlock();
+
+                if(newState != state)
+                {
+                    _onStateChange(newState);
+                }
+
+                state = newState;
+            }
+        }
+
+        bool                                _threadRunning;
+        std::mutex                          _memberMutex;
+        std::thread                         _thread;
+        std::unique_ptr<GenericInput<T>>    _input;
+        InputStateChangedCallback<T>        _onStateChange;
+    };
+
 
     template<typename StateType, typename IOType>
     class IOController
@@ -435,7 +496,6 @@ namespace opbox {
             return std::make_unique<IOActuator<T>>(std::make_unique<OutFile<T>>(targetPath), defaultState);
         }
 
-
         IOController(std::unique_ptr<IOActuator<IOType>> actuator)
          : _actuator(std::move(actuator)) { }
 
@@ -462,16 +522,55 @@ namespace opbox {
         IO_LED_OFF,
         IO_LED_ON,
         IO_LED_BLINK_TWICE,
-        IO_LED_BLINKING
+        IO_LED_FAST_BLINK,
+        IO_LED_SLOW_BLINK
     };
+
 
     class IOLed : public IOController<IOLedState, int>
     {
         public:
-        IOLed(bool forceBackup = false);
+        IOLed(std::unique_ptr<IOActuator<int>> actuator)
+         : IOController<IOLedState, int>(std::move(actuator)) { }
 
         protected:
         ActuatorPattern<int> getStatePattern(const IOLedState& state) const override;
+    };
+
+
+    class IOUsrLed : public IOLed
+    {
+        public:
+        IOUsrLed(bool forceBackup = false)
+         : IOLed(makeFileActuator(0, OPBOX_IO_PRIMARY_LED_FILE, OPBOX_IO_BACKUP_LED_FILE, forceBackup)) { }
+    };
+
+
+    class IOGpioLed : public IOLed
+    {
+        public:
+        IOGpioLed(int pin, 
+                GPIOState defaultState = GPIOState::LOW,
+                bool forceFakeGpio = false,
+                const std::string& fakeGpioFile = "./test_gpio")
+         : IOLed(std::make_unique<IOActuator<int>>(std::make_unique<GPIOOutput>(pin, forceFakeGpio, fakeGpioFile), defaultState == GPIOState::HIGH)) { }
+    };
+
+
+    class KillSwitchLeds
+    {
+        public:
+        KillSwitchLeds(int greenPin, int yellowPin, int redPin, bool forceFakeGpio = false);
+        void setAllStates(IOLedState state);
+        void setRedState(IOLedState state);
+        void setYellowState(IOLedState state);
+        void setGreenState(IOLedState state);
+
+        private:
+        IOGpioLed 
+            _green,
+            _yellow,
+            _red;
     };
 
 
@@ -490,5 +589,19 @@ namespace opbox {
 
         protected:
         ActuatorPattern<int> getStatePattern(const IOBuzzerState& state) const override;
+    };
+
+
+    template<typename T>
+    class IOGpioSensor : public IOSensor<T>
+    {
+        public:
+        IOGpioSensor(
+            int pin,
+            InputStateChangedCallback<T> callback,
+            bool forceFakeGpio = false,
+            const std::string& fakeGpioFile = "./test_gpio")
+         : IOSensor<T>(std::make_unique<GPIOInput>(pin, forceFakeGpio, fakeGpioFile), callback)
+         { }
     };
 }

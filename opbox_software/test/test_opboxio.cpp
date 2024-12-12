@@ -78,9 +78,9 @@ TEST(TestOpboxIO, TestIOActuatorInt)
     ASSERT_TRUE(act.state());
 }
 
-TEST(TestOpboxIO, TestIOLedOff)
+TEST(TestOpboxIO, TestIOUsrLedOff)
 {
-    opbox::IOLed led(true);
+    opbox::IOUsrLed led(true);
     led.setState(opbox::IOLedState::IO_LED_OFF);
     opbox::StringInFile f(OPBOX_IO_BACKUP_LED_FILE);
 
@@ -94,9 +94,9 @@ TEST(TestOpboxIO, TestIOLedOff)
     }
 }
 
-TEST(TestOpboxIO, TestIOLedOn)
+TEST(TestOpboxIO, TestIOUsrLedOn)
 {
-    opbox::IOLed led(true);
+    opbox::IOUsrLed led(true);
     led.setState(opbox::IOLedState::IO_LED_ON);
     opbox::StringInFile f(OPBOX_IO_BACKUP_LED_FILE);
 
@@ -149,7 +149,7 @@ TEST(TestOpboxIO, TestIOBuzzerChirp)
 
 TEST(TestOpboxIO, TestIOScheduling)
 {
-    opbox::IOLed led(true);
+    opbox::IOUsrLed led(true);
     led.setState(opbox::IOLedState::IO_LED_ON);
     led.setNextState(opbox::IOLedState::IO_LED_OFF, 500ms);
 
@@ -167,7 +167,7 @@ TEST(TestOpboxIO, TestIOScheduling)
 
 TEST(TestOpboxIO, TestIOSchedulingInterval)
 {
-    opbox::IOLed led(true);
+    opbox::IOUsrLed led(true);
     led.setState(opbox::IOLedState::IO_LED_ON);
     led.setNextState(opbox::IOLedState::IO_LED_OFF, 500ms);
     led.setNextState(opbox::IOLedState::IO_LED_ON, 500ms);
@@ -190,7 +190,7 @@ TEST(TestOpboxIO, TestIOQueueInterruptClearing)
 {
     auto start = std::chrono::system_clock::now();
 
-    opbox::IOLed led(true);
+    opbox::IOUsrLed led(true);
     led.setState(opbox::IOLedState::IO_LED_ON);
     led.setNextState(opbox::IOLedState::IO_LED_OFF, 750ms);
     led.setNextState(opbox::IOLedState::IO_LED_ON, 250ms); //test that the queue is wiped. this should be cleared
@@ -215,7 +215,7 @@ TEST(TestOpboxIO, TestIOQueueInterruptNonClearing)
 {
     auto start = std::chrono::system_clock::now();
 
-    opbox::IOLed led(true);
+    opbox::IOUsrLed led(true);
     led.setState(opbox::IOLedState::IO_LED_ON);
     led.setNextState(opbox::IOLedState::IO_LED_OFF, 750ms);
     led.setNextState(opbox::IOLedState::IO_LED_ON, 500ms); //test that the queue is wiped. this should be cleared
@@ -240,10 +240,10 @@ TEST(TestOpboxIO, TestGPIOOutput)
 {
     opbox::GPIOOutput gpout(1, true, "./test_files/test_gpio");
     opbox::StringInFile f("./test_files/test_gpio");
-    gpout.write(false);
+    gpout.write(0);
     ASSERT_TRUE(f.exists());
     ASSERT_EQ(f.read(), "0");
-    gpout.write(true);
+    gpout.write(1);
     ASSERT_EQ(f.read(), "1");
 }
 
@@ -252,7 +252,7 @@ TEST(TestOpboxIO, TestGPIOInput)
     opbox::GPIOInput gpin(1, true, "./test_files/test_gpio");
     opbox::StringOutFile f("./test_files/test_gpio");
     f.write("1");
-    ASSERT_TRUE(gpin.read());
+    ASSERT_EQ(gpin.read(), 1);
     f.write("0");
-    ASSERT_FALSE(gpin.read());
+    ASSERT_EQ(gpin.read(), 0);
 }
