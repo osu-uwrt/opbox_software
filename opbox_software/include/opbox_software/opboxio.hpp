@@ -604,4 +604,10 @@ namespace opbox {
          : IOSensor<T>(std::make_unique<GPIOInput>(pin, forceFakeGpio, fakeGpioFile), callback)
          { }
     };
+
+
+    //
+    // Random utility function
+    //
+    std::string resolveAssetPath(const std::string& assetPath);
 }

@@ -2,6 +2,7 @@
 
 #include <cstdarg>
 #include <stdio.h>
+#include <mutex>
 
 #define OPBOX_CURRENT_LOG_LEVEL OpboxLogLevel::OPBOX_DEBUG
 
@@ -20,11 +21,14 @@ enum OpboxLogLevel
 //actual code to handle logging
 static void opboxLoggingFunc(OpboxLogLevel level, const char *fmt, ...)
 {
+    static std::mutex logMutex;
     if(OPBOX_CURRENT_LOG_LEVEL <= level)
     {
         va_list v;
         va_start(v, fmt);
+        logMutex.lock();
         vfprintf((level == OpboxLogLevel::OPBOX_ERROR ? stderr : stdout), fmt, v);
+        logMutex.unlock();
         printf("\n");
         va_end(v);
     }

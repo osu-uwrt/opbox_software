@@ -1,0 +1,31 @@
+opbox_config:
+  # clients, in priority order. Will connect on port specified by client_port
+  clients:
+    - orin
+    - lilboat
+    - localhost
+  
+  client_port: 9444
+  
+  # diagnostics server settings
+  diag_server_port: 5000
+  # if use_custom_diag_server_ip is false, the program will assume that the
+  # currently connected client is where the diagnostics webview is being served
+  # from. If it is true, the program will assume that it is being served from
+  # the ip address specified by custom_diag_server_ip.
+  use_custom_diag_server_ip: false
+  custom_diag_server_ip: "192.168.1.102"
+  
+  # next settings enable different methods of warning users to robot danger states.
+  # for safety one of the error buzzer or error screen popup must be true or the 
+  # program will warn and use both (for example, it may be desireable to disable
+  # the buzzer at a hotel where overnight testing must be quiet)
+
+  # ERROR 
+  error_buzzer_enabled: true
+  error_screen_popup_enabled: true
+
+  # WARN, do not need both enabled here but it is recommended
+  warn_buzzer_enabled: true
+  warn_screen_popup_enabled: true
+  warn_screen_popup_lifetime: 15 # seconds

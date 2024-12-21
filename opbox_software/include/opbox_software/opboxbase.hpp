@@ -6,6 +6,10 @@
 
 #include <iostream>
 
+#ifndef INSTALL_LOCATION
+#define INSTALL_LOCATION "/usr/local"
+#endif
+
 
 /**
  * Base settings for opbox

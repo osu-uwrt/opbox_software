@@ -265,4 +265,26 @@ namespace opbox {
     {
         _green.setState(state);
     }
+
+    //
+    // Random utility function
+    //
+    std::string resolveAssetPath(const std::string& assetPath)
+    {
+        //look in build first (devel asset location)
+        if(StringInFile(assetPath).exists())
+        {
+            return assetPath;
+        }
+
+        //now look in install directory 
+        std::string installAssetPath = "/usr/local/opbox/" + assetPath;
+        if(StringInFile(installAssetPath).exists())
+        {
+            return installAssetPath;
+        }
+
+        OPBOX_LOG_ERROR("Asset %s could not be found! checked path %s and install path %s", assetPath.c_str(), assetPath.c_str(), installAssetPath.c_str());
+        throw std::runtime_error("Asset " + assetPath + " could not be found!");
+    }
 }
