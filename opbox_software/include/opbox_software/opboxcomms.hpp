@@ -4,6 +4,11 @@
 #include "opbox_software/opboxframes.hpp"
 #include "opbox_software/opboxlogging.hpp"
 
+#define HEARTBEAT_RATE 100ms
+
+// this is in ms
+#define STALE_TIME 500
+
 namespace opbox
 {
     class OpboxRobotLink
@@ -18,6 +23,13 @@ namespace opbox
             const std::string& address,
             int port,
             const NotificationHandler& notificationHandler,
+            const KillButtonHandler& killButtonHandler,
+            const StatusHandler& statusHandler);
+
+        OpboxRobotLink(
+            const std::string& address,
+            int port,
+            const NotificationHandler& notificationHandler,
             const KillButtonHandler& killButtonHandler);
         
         OpboxRobotLink(
@@ -26,8 +38,8 @@ namespace opbox
             const NotificationHandler& notificationHandler,
             const StatusHandler& statusHandler);
 
-        static int getNextNotificationUid();
-        bool connected();
+        static int getNextNotificationUid(void);
+        bool connected(void);
         bool sendNotificationToRemote(NotificationType type, const std::string& sensor, const std::string& desc);
         void sendKillButtonState(bool state);
 
@@ -38,5 +50,9 @@ namespace opbox
 
         static int nextNotificationUid;
         serial_library::SerialProcessor::UniquePtr serialProc;
+
+        const NotificationHandler handleNotification;
+        const KillButtonHandler handleKillButton;
+        const StatusHandler handleStatus;
     };
 }

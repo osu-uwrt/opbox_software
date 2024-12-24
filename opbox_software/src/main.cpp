@@ -1,5 +1,4 @@
 #include <csignal>
-#include <serial_library/serial_library.hpp>
 #include "opbox_software/opboxio.hpp"
 #include "opbox_software/opboxlogging.hpp"
 #include "opbox_software/opboxutil.hpp"

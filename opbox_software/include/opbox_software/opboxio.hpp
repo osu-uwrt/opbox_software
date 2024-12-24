@@ -253,10 +253,10 @@ namespace opbox {
          : _defaultState(initialState),
            _state(initialState),
            _threadRunning(true),
-           _thread(std::bind(&IOActuator::threadFunc, this)),
            _output(std::move(output))
         {
             _output->write(initialState);
+            _thread = std::make_unique<std::thread>(std::bind(&IOActuator::threadFunc, this));
         }
 
 
@@ -265,7 +265,7 @@ namespace opbox {
             _memberMutex.lock();
             _threadRunning = false;
             _memberMutex.unlock();
-            _thread.join();
+            _thread->join();
         }
 
 
@@ -308,8 +308,8 @@ namespace opbox {
         bool isQueueDelayUp()
         {
             std::chrono::time_point now = std::chrono::system_clock::now();
-            auto elapsed = now - _queuePatternStartTime;
             _memberMutex.lock();
+            auto elapsed = now - _queuePatternStartTime;
             bool ret = !_queue.empty()
                         && elapsed >= _queue.front().second;
             _memberMutex.unlock();
@@ -400,11 +400,11 @@ namespace opbox {
         const T             _defaultState;
         bool                _threadRunning;
         std::mutex          _memberMutex; // mutex for all member variables
-        std::thread         _thread;
         ActuatorPattern<T>  _activePattern;
         ActuatorQueue<T>    _queue;
         T                   _state;
         
+        std::unique_ptr<std::thread>      _thread;
         std::unique_ptr<GenericOutput<T>> _output;
         std::chrono::time_point<std::chrono::system_clock> _queuePatternStartTime;
     };

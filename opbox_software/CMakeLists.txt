@@ -23,13 +23,15 @@ FetchContent_MakeAvailable(yaml-cpp)
 
 add_library(opbox_lib
     src/opboxio.cpp
-    src/opboxutil.cpp)
+    src/opboxutil.cpp
+    src/opboxcomms.cpp)
 target_include_directories(opbox_lib PUBLIC include)
+target_link_libraries(opbox_lib PUBLIC serial_library)
 
 add_executable(opbox_main src/main.cpp)
 target_include_directories(opbox_main PUBLIC include)
 target_link_libraries(opbox_main 
-    PUBLIC opbox_lib serial_library yaml-cpp::yaml-cpp
+    PUBLIC opbox_lib yaml-cpp::yaml-cpp
     PRIVATE Threads::Threads)
 
 #
