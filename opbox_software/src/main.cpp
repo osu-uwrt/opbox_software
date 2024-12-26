@@ -11,12 +11,6 @@
 
 using namespace std::placeholders;
 
-enum KillSwitchState
-{
-    UNKILLED,
-    KILLED
-};
-
 typedef std::map<std::string, opbox::OpboxRobotLink::UniquePtr> SerialProcMap;
 void signalHandler(int signum);
 

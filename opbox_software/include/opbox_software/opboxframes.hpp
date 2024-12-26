@@ -4,11 +4,11 @@
 
 namespace opbox
 {
+    typedef uint16_t NotificationUid;
+
     enum OpboxFrameId
     {
-        HEARTBEAT_FRAME,
-        STATUS_IN_FRAME,
-        STATUS_OUT_FRAME,
+        STATUS_FRAME,
         NOTIFICATION_FRAME,
         ACK_FRAME
     };
@@ -20,12 +20,29 @@ namespace opbox
         DIAGNOSTICS_STATE,
         LEAK_STATE,
         KILL_BUTTON_STATE,
-        TIMESTAMP,
         NOTIFICATION_SENSOR_NAME,
         NOTIFICATION_TYPE,
         NOTIFICATION_UID,
-        NOTIFICATION_DESCRIPTION,
+        ACKED_NOTIFICATION_UID,
+        NOTIFICATION_DESCRIPTION
+    };
 
+    enum KillSwitchState
+    {
+        UNKILLED,
+        KILLED
+    };
+
+    enum ThrusterState
+    {
+        IDLE,
+        ACTIVE
+    };
+
+    enum LeakState
+    {
+        OK,
+        LEAKING
     };
 
     enum DiagnosticState
@@ -35,7 +52,7 @@ namespace opbox
         DIAGNOSTICS_ERROR
     };
 
-    std::string diagnosticStateToString(const DiagnosticState& state)
+    static std::string diagnosticStateToString(const DiagnosticState& state)
     {
         switch(state)
         {
@@ -57,7 +74,7 @@ namespace opbox
         NOTIFICATION_FATAL
     };
 
-    std::string notificationTypeToString(const NotificationType& type)
+    static std::string notificationTypeToString(const NotificationType& type)
     {
         switch(type)
         {
@@ -72,55 +89,41 @@ namespace opbox
         }
     }
 
+    const char OPBOX_SYNC[] = "*";
+
     const serial_library::SerialFramesMap OPBOX_FRAMES = {
         {
-            HEARTBEAT_FRAME, //this frame keeps the timestamp up to date 
+            STATUS_FRAME, //will be received by client running on robot
             serial_library::assembleSerialFrame({
-                { FIELD_SYNC, 1 },
-                { FIELD_FRAME, 1 },
-                { TIMESTAMP, 8 }
-            })
-        },
-        {
-            STATUS_IN_FRAME, //will be received by client running on robot
-            serial_library::assembleSerialFrame({
-                { FIELD_SYNC, 1 },
+                { FIELD_SYNC, sizeof(OPBOX_SYNC) },
                 { FIELD_FRAME, 1 },
                 { ROBOT_KILL_STATE, 1 },
+                { KILL_BUTTON_STATE, 1 },
+                { THRUSTER_STATE, 1 },
                 { DIAGNOSTICS_STATE, 1 },
                 { LEAK_STATE, 1 },
-                { TIMESTAMP, 8 }
-            })
-        },
-        {
-            STATUS_OUT_FRAME, //will be sent to client running on robot
-            serial_library::assembleSerialFrame({
-                { FIELD_SYNC, 1 },
-                { FIELD_FRAME, 1 },
-                { KILL_BUTTON_STATE, 1 },
-                { TIMESTAMP, 8 }
+                { FIELD_CHECKSUM, 2 }
             })
         },
         {
             NOTIFICATION_FRAME,
             serial_library::assembleSerialFrame({
-                { FIELD_SYNC, 1 },
+                { FIELD_SYNC, sizeof(OPBOX_SYNC) },
                 { FIELD_FRAME, 1 },
                 { NOTIFICATION_TYPE, 1 },
                 { NOTIFICATION_UID, 1 },
                 { NOTIFICATION_SENSOR_NAME, 16 },
                 { NOTIFICATION_DESCRIPTION, 64 },
-                { TIMESTAMP, 8 }
+                { FIELD_CHECKSUM, 2 }
             })
         },
         {
             ACK_FRAME,
             serial_library::assembleSerialFrame({
-                { FIELD_SYNC, 1 },
+                { FIELD_SYNC, sizeof(OPBOX_SYNC) },
                 { FIELD_FRAME, 1 },
-                { NOTIFICATION_TYPE, 1 },
-                { NOTIFICATION_UID, 1 },
-                { TIMESTAMP, 8 }
+                { ACKED_NOTIFICATION_UID, 1 },
+                { FIELD_CHECKSUM, 2 }
             })
         }
     };
