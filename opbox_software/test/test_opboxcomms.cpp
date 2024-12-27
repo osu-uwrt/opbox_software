@@ -56,6 +56,7 @@ class OpboxRobotLinkTest : public ::testing::Test
 
     void handleKillButtonFromOpbox(const opbox::KillSwitchState& killButtonState)
     {
+        OPBOX_LOG_DEBUG("Kill button state %d received", killButtonState);
         latestKillButtonState = killButtonState;
     }
 
@@ -64,56 +65,70 @@ class OpboxRobotLinkTest : public ::testing::Test
 };
 
 
-// TEST_F(OpboxRobotLinkTest, TestRobotLinkConnected)
-// {
-//     ASSERT_TRUE(robotLink->connected());
-//     ASSERT_TRUE(opboxLink->connected());
+TEST_F(OpboxRobotLinkTest, TestRobotLinkConnected)
+{
+    ASSERT_TRUE(robotLink->connected());
+    ASSERT_TRUE(opboxLink->connected());
 
-//     //disconnect opbox link to test robot link connection
-//     opboxLink.reset();
+    std::this_thread::sleep_for(600ms);
 
-//     std::this_thread::sleep_for(250ms);
-//     ASSERT_TRUE(robotLink->connected());
+    ASSERT_TRUE(robotLink->connected());
+    ASSERT_TRUE(opboxLink->connected());
 
-//     std::this_thread::sleep_for(300ms);
-//     ASSERT_FALSE(robotLink->connected());
-// }
+    //disconnect opbox link to test robot link connection
+    opboxLink.reset();
 
-// TEST_F(OpboxRobotLinkTest, TestOpboxLinkConnected)
-// {
-//     ASSERT_TRUE(robotLink->connected());
-//     ASSERT_TRUE(opboxLink->connected());
+    std::this_thread::sleep_for(250ms);
+    ASSERT_TRUE(robotLink->connected());
 
-//     //disconnect opbox link to test robot link connection
-//     robotLink.reset();
+    std::this_thread::sleep_for(300ms);
+    ASSERT_FALSE(robotLink->connected());
+}
 
-//     std::this_thread::sleep_for(250ms);
-//     ASSERT_TRUE(opboxLink->connected());
+TEST_F(OpboxRobotLinkTest, TestOpboxLinkConnected)
+{
+    ASSERT_TRUE(robotLink->connected());
+    ASSERT_TRUE(opboxLink->connected());
 
-//     std::this_thread::sleep_for(300ms);
-//     ASSERT_FALSE(opboxLink->connected());
-// }
+    std::this_thread::sleep_for(600ms);
+
+    ASSERT_TRUE(robotLink->connected());
+    ASSERT_TRUE(opboxLink->connected());
+
+    //disconnect opbox link to test robot link connection
+    robotLink.reset();
+
+    std::this_thread::sleep_for(250ms);
+    ASSERT_TRUE(opboxLink->connected());
+
+    std::this_thread::sleep_for(300ms);
+    ASSERT_FALSE(opboxLink->connected());
+}
 
 TEST_F(OpboxRobotLinkTest, TestSendKillButtonState)
 {
-    std::this_thread::sleep_for(1s);
+    OPBOX_LOG_DEBUG("Testing button state killed");
     robotLink->sendKillButtonState(opbox::KillSwitchState::KILLED);
-    // std::this_thread::sleep_for(50ms);
+    std::this_thread::sleep_for(250ms);
     ASSERT_EQ(getLatestKillButtonState(), opbox::KillSwitchState::KILLED);
 
+    OPBOX_LOG_DEBUG("Testing button state unkilled");
     robotLink->sendKillButtonState(opbox::KillSwitchState::UNKILLED);
-    // std::this_thread::sleep_for(50ms);
+    std::this_thread::sleep_for(250ms);
     ASSERT_EQ(getLatestKillButtonState(), opbox::KillSwitchState::UNKILLED);
 
+    OPBOX_LOG_DEBUG("Testing button state killed");
     robotLink->sendKillButtonState(opbox::KillSwitchState::KILLED);
-    // std::this_thread::sleep_for(50ms);
+    std::this_thread::sleep_for(250ms);
     ASSERT_EQ(getLatestKillButtonState(), opbox::KillSwitchState::KILLED);
 
+    OPBOX_LOG_DEBUG("Testing button state killed");
     robotLink->sendKillButtonState(opbox::KillSwitchState::KILLED);
-    // std::this_thread::sleep_for(50ms);
+    std::this_thread::sleep_for(250ms);
     ASSERT_EQ(getLatestKillButtonState(), opbox::KillSwitchState::KILLED);
 
+    OPBOX_LOG_DEBUG("Testing button state unkilled");
     robotLink->sendKillButtonState(opbox::KillSwitchState::UNKILLED);
-    // std::this_thread::sleep_for(50ms);
+    std::this_thread::sleep_for(250ms);
     ASSERT_EQ(getLatestKillButtonState(), opbox::KillSwitchState::UNKILLED);
 }

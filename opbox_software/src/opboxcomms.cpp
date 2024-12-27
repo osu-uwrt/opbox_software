@@ -16,7 +16,7 @@ namespace opbox
     {
         OPBOX_LOG_DEBUG("Default status handler reached; robot kill state: %d, thruster state: %d, diagnostic state: %s, leak state: %d",
             robotKillState, thrusterState,
-            diagnosticStateToString(diagState),
+            diagnosticStateToString(diagState).c_str(),
             leakState);
     }
 
@@ -31,19 +31,24 @@ namespace opbox
         std::unique_ptr<serial_library::SerialTransceiver> transceiver,
         const NotificationHandler& notificationHandler,
         const KillButtonHandler& killButtonHandler,
-        const StatusHandler& statusHandler)
+        const StatusHandler& statusHandler,
+        const OpboxFrameId& bumpFrameId,
+        const std::string& debugName)
      : handleNotification(notificationHandler),
        handleKillButton(killButtonHandler),
        handleStatus(statusHandler),
-       threadRunning(true)
+       threadRunning(true),
+       bumpFrameId(bumpFrameId),
+       debugName(debugName)
     {
         serialProc = std::make_unique<serial_library::SerialProcessor>(
             std::move(transceiver),
             OPBOX_FRAMES,
-            STATUS_FRAME,
+            NOTHING_FRAME,
             OPBOX_SYNC,
             sizeof(OPBOX_SYNC),
-            getCallbacks());
+            getCallbacks(),
+            debugName);
         
         auto now = std::chrono::system_clock::now();
 
@@ -60,7 +65,11 @@ namespace opbox
     OpboxRobotLink::~OpboxRobotLink()
     {
         threadRunning = false;
-        thread->join();
+
+        if(thread->joinable())
+        {
+            thread->join();
+        }
     }
 
 
@@ -103,13 +112,13 @@ namespace opbox
 
     void OpboxRobotLink::sendKillButtonState(const KillSwitchState& state)
     {
-        throw std::runtime_error("sendKillButtonState cannot be used in this context.");
+        throw std::runtime_error(debugName + ": sendKillButtonState cannot be used in this context.");
     }
 
 
     void OpboxRobotLink::sendRobotState(const KillSwitchState& killState, const ThrusterState& thrusterState, const DiagnosticState& diagState, const LeakState& leakState)
     {
-        throw std::runtime_error("sendRobotState cannot be used in this context.");
+        throw std::runtime_error(debugName + ": sendRobotState cannot be used in this context.");
     }
 
 
@@ -127,16 +136,23 @@ namespace opbox
         
         switch(frameType)
         {
-            case STATUS_FRAME:
+            case ROBOT_STATUS_FRAME:
+                OPBOX_LOG_DEBUG("%s: New robot status received", debugName.c_str());
+
                 handleStatus(
-                    serialProc->getFieldValue<KillSwitchState>(ROBOT_KILL_STATE),
-                    serialProc->getFieldValue<ThrusterState>(THRUSTER_STATE),
-                    serialProc->getFieldValue<DiagnosticState>(DIAGNOSTICS_STATE),
-                    serialProc->getFieldValue<LeakState>(LEAK_STATE)
+                    (KillSwitchState) serialProc->getFieldValue<uint8_t>(ROBOT_KILL_STATE),
+                    (ThrusterState) serialProc->getFieldValue<uint8_t>(THRUSTER_STATE),
+                    (DiagnosticState) serialProc->getFieldValue<uint8_t>(DIAGNOSTICS_STATE),
+                    (LeakState) serialProc->getFieldValue<uint8_t>(LEAK_STATE)
                 );
 
+                break;
+            
+            case OPBOX_STATUS_FRAME:
+                OPBOX_LOG_DEBUG("%s: New opbox status received", debugName.c_str());
+
                 handleKillButton(
-                    serialProc->getFieldValue<KillSwitchState>(KILL_BUTTON_STATE)
+                    (KillSwitchState) serialProc->getFieldValue<uint8_t>(KILL_BUTTON_STATE)
                 );
 
                 break;
@@ -198,14 +214,26 @@ namespace opbox
 
     void OpboxRobotLink::threadFunc(void)
     {
-        OPBOX_LOG_DEBUG("OpboxRobotLink thread starting");
+        OPBOX_LOG_DEBUG("%s: OpboxRobotLink thread starting", debugName.c_str());
         while(threadRunning)
         {
             auto now = std::chrono::system_clock::now();
             serialProc->update(now);
+
+            if(now - lastSendTime > 100ms)
+            {
+                serialProc->send(bumpFrameId);
+                lastSendTime = now;
+            }
+
+            KillSwitchState a = (KillSwitchState) serialProc->getFieldValue<uint8_t>(KILL_BUTTON_STATE);
+            OPBOX_LOG_DEBUG("%s: kill button state is currently %d", debugName.c_str(), a);
+
+            //this gives other threads chance to aquire mutexes for sending data as std::mutex is not necessarily fair
+            std::this_thread::sleep_for(5ms); 
         }
 
-        OPBOX_LOG_DEBUG("OpboxRobotLink thread ending");
+        OPBOX_LOG_DEBUG("%s: OpboxRobotLink thread ending", debugName.c_str());
     }
 
 
@@ -218,15 +246,19 @@ namespace opbox
         std::move(buildTransceiver(address, port)),
         notificationHandler,
         &defaultKillButtonHandler,
-        statusHandler)
+        statusHandler,
+        OPBOX_STATUS_FRAME,
+        "RobotLink")
     { }
     
 
     void RobotLink::sendKillButtonState(const KillSwitchState& state)
     {
+        OPBOX_LOG_DEBUG("Sending opbox state with kill button state %d", state);
         auto now = std::chrono::system_clock::now();
-        serialProc->setFieldValue<KillSwitchState>(KILL_BUTTON_STATE, state, now);
-        serialProc->send(STATUS_FRAME);
+        serialProc->setFieldValue<uint8_t>(KILL_BUTTON_STATE, state, now);
+        serialProc->send(OPBOX_STATUS_FRAME);
+        lastSendTime = now;
     }
 
 
@@ -235,10 +267,10 @@ namespace opbox
         if(address == "localhost")
         {
             OPBOX_LOG_DEBUG("RobotLink using LinuxDualUDPTransceiver for localhost");
-            return std::make_unique<serial_library::LinuxDualUDPTransceiver>(address, port, port + 1);
+            return std::make_unique<serial_library::LinuxDualUDPTransceiver>(address, port, port + 1, 0.1);
         }
 
-        return std::make_unique<serial_library::LinuxUDPTransceiver>(address, port);
+        return std::make_unique<serial_library::LinuxUDPTransceiver>(address, port, 0.1);
     }
 
 
@@ -251,18 +283,22 @@ namespace opbox
         buildTransceiver(address, port),
         notificationHandler,
         killButtonHandler,
-        &defaultStatusHandler)
+        &defaultStatusHandler,
+        ROBOT_STATUS_FRAME,
+        "OpboxLink")
     { }
 
 
     void OpboxLink::sendRobotState(const KillSwitchState& killState, const ThrusterState& thrusterState, const DiagnosticState& diagState, const LeakState& leakState)
     {
+        OPBOX_LOG_DEBUG("Sending robot state");
         auto now = std::chrono::system_clock::now();
-        serialProc->setFieldValue<KillSwitchState>(ROBOT_KILL_STATE, killState, now);
-        serialProc->setFieldValue<ThrusterState>(THRUSTER_STATE, thrusterState, now);
-        serialProc->setFieldValue<DiagnosticState>(DIAGNOSTICS_STATE, diagState, now);
-        serialProc->setFieldValue<LeakState>(LEAK_STATE, leakState, now);
-        serialProc->send(STATUS_FRAME);
+        serialProc->setFieldValue<uint8_t>(ROBOT_KILL_STATE, killState, now);
+        serialProc->setFieldValue<uint8_t>(THRUSTER_STATE, thrusterState, now);
+        serialProc->setFieldValue<uint8_t>(DIAGNOSTICS_STATE, diagState, now);
+        serialProc->setFieldValue<uint8_t>(LEAK_STATE, leakState, now);
+        serialProc->send(ROBOT_STATUS_FRAME);
+        lastSendTime = now;
     }
 
 
@@ -271,9 +307,9 @@ namespace opbox
         if(address == "localhost")
         {
             OPBOX_LOG_DEBUG("OpboxLink using LinuxDualUDPTransceiver for localhost");
-            return std::make_unique<serial_library::LinuxDualUDPTransceiver>(address, port + 1, port);
+            return std::make_unique<serial_library::LinuxDualUDPTransceiver>(address, port + 1, port, 0.1);
         }
 
-        return std::make_unique<serial_library::LinuxUDPTransceiver>(address, port);
+        return std::make_unique<serial_library::LinuxUDPTransceiver>(address, port, 0.1);
     }
 }

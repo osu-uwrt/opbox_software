@@ -8,7 +8,9 @@ namespace opbox
 
     enum OpboxFrameId
     {
-        STATUS_FRAME,
+        NOTHING_FRAME,
+        ROBOT_STATUS_FRAME,
+        OPBOX_STATUS_FRAME,
         NOTIFICATION_FRAME,
         ACK_FRAME
     };
@@ -93,15 +95,31 @@ namespace opbox
 
     const serial_library::SerialFramesMap OPBOX_FRAMES = {
         {
-            STATUS_FRAME, //will be received by client running on robot
+            NOTHING_FRAME,
+            serial_library::assembleSerialFrame({
+                { FIELD_SYNC, sizeof(OPBOX_SYNC) },
+                { FIELD_FRAME, 1 },
+                { FIELD_CHECKSUM, 2 }
+            })
+        },
+        {
+            ROBOT_STATUS_FRAME, //will be received by client running on robot
             serial_library::assembleSerialFrame({
                 { FIELD_SYNC, sizeof(OPBOX_SYNC) },
                 { FIELD_FRAME, 1 },
                 { ROBOT_KILL_STATE, 1 },
-                { KILL_BUTTON_STATE, 1 },
                 { THRUSTER_STATE, 1 },
                 { DIAGNOSTICS_STATE, 1 },
                 { LEAK_STATE, 1 },
+                { FIELD_CHECKSUM, 2 }
+            })
+        },
+        {
+            OPBOX_STATUS_FRAME,
+            serial_library::assembleSerialFrame({
+                { FIELD_SYNC, sizeof(OPBOX_SYNC) },
+                { FIELD_FRAME, 1 },
+                { KILL_BUTTON_STATE, 1 },
                 { FIELD_CHECKSUM, 2 }
             })
         },

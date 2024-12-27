@@ -31,7 +31,9 @@ namespace opbox
             std::unique_ptr<serial_library::SerialTransceiver> transceiver,
             const NotificationHandler& notificationHandler,
             const KillButtonHandler& killButtonHandler,
-            const StatusHandler& statusHandler);
+            const StatusHandler& statusHandler,
+            const OpboxFrameId& bumpFrameId,
+            const std::string& debugName);
 
         ~OpboxRobotLink();
 
@@ -49,7 +51,9 @@ namespace opbox
 
         protected:
         serial_library::SerialProcessor::UniquePtr serialProc;
-        
+        const OpboxFrameId bumpFrameId;
+        std::chrono::time_point<std::chrono::system_clock> lastSendTime;
+
         private:
         serial_library::SerialProcessorCallbacks getCallbacks(void);
         void newMessageCallback(const serial_library::SerialValuesMap& values);
@@ -67,6 +71,7 @@ namespace opbox
         const NotificationHandler handleNotification;
         const KillButtonHandler handleKillButton;
         const StatusHandler handleStatus;
+        const std::string debugName;
 
         //thread
         bool threadRunning;
