@@ -131,7 +131,7 @@ namespace opbox
                 { NOTIFICATION_TYPE, 1 },
                 { NOTIFICATION_UID, 1 },
                 { NOTIFICATION_SENSOR_NAME, 16 },
-                { NOTIFICATION_DESCRIPTION, 64 },
+                { NOTIFICATION_DESCRIPTION, 63 },
                 { FIELD_CHECKSUM, 2 }
             })
         },

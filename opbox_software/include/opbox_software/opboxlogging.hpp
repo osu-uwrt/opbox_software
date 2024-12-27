@@ -4,7 +4,7 @@
 #include <stdio.h>
 #include <mutex>
 
-#define OPBOX_CURRENT_LOG_LEVEL OpboxLogLevel::OPBOX_DEBUG
+#define OPBOX_CURRENT_LOG_LEVEL OpboxLogLevel::OPBOX_INFO
 
 #define OPBOX_LOG_GENERIC(level, ...) opboxLoggingFunc(OpboxLogLevel::level, "[opbox] [" #level "] " __VA_ARGS__)
 #define OPBOX_LOG_DEBUG(...) OPBOX_LOG_GENERIC(OPBOX_DEBUG, __VA_ARGS__)

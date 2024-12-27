@@ -159,11 +159,11 @@ namespace opbox
             case NOTIFICATION_FRAME:
                 {
                     //handle notification with callback
-                    NotificationUid uid = serialProc->getFieldValue<NotificationUid>(NOTIFICATION_UID);
+                    NotificationUid uid = (NotificationUid) serialProc->getFieldValue<uint8_t>(NOTIFICATION_UID);
                     if(handledUids.count(uid) == 0)
                     {
                         handleNotification(
-                            serialProc->getFieldValue<NotificationType>(NOTIFICATION_TYPE),
+                            (NotificationType) serialProc->getFieldValue<uint8_t>(NOTIFICATION_TYPE),
                             serialProc->getField(NOTIFICATION_SENSOR_NAME).data.data,
                             serialProc->getField(NOTIFICATION_DESCRIPTION).data.data);
                         
@@ -171,7 +171,8 @@ namespace opbox
                     }
                     
                     //send acknowledgement of notification
-                    serialProc->setFieldValue<NotificationUid>(ACKED_NOTIFICATION_UID, uid, std::chrono::system_clock::now());
+                    serialProc->setFieldValue<uint8_t>(ACKED_NOTIFICATION_UID, uid, std::chrono::system_clock::now());
+                    serialProc->send(ACK_FRAME);
                 }
                 break;
             default:
@@ -188,8 +189,8 @@ namespace opbox
         const std::string& desc)
     {
         auto now = std::chrono::system_clock::now();
-        serialProc->setFieldValue<NotificationUid>(NOTIFICATION_UID, uid, now);
-        serialProc->setFieldValue<NotificationType>(NOTIFICATION_TYPE, type, now);
+        serialProc->setFieldValue<uint8_t>(NOTIFICATION_UID, uid, now);
+        serialProc->setFieldValue<uint8_t>(NOTIFICATION_TYPE, type, now);
         serialProc->setField(NOTIFICATION_SENSOR_NAME, serial_library::serialDataFromString(sensor), now);
         serialProc->setField(NOTIFICATION_DESCRIPTION, serial_library::serialDataFromString(desc), now);
         serialProc->send(NOTIFICATION_FRAME);
@@ -200,12 +201,12 @@ namespace opbox
     {
         auto startTime = std::chrono::system_clock::now();
         std::this_thread::sleep_for(1ms);
-        bool acked = serialProc->getFieldValue<NotificationUid>(ACKED_NOTIFICATION_UID) == uid;
+        bool acked = (NotificationUid) serialProc->getFieldValue<uint8_t>(ACKED_NOTIFICATION_UID) == uid;
         
         while(std::chrono::duration_cast<std::chrono::milliseconds>(
             std::chrono::system_clock::now() - startTime) < timeout && !acked)
         {
-            acked = serialProc->getFieldValue<NotificationUid>(ACKED_NOTIFICATION_UID) == uid;
+            acked = (NotificationUid) serialProc->getFieldValue<uint8_t>(ACKED_NOTIFICATION_UID) == uid;
         }
 
         return acked;
