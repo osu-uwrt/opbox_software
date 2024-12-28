@@ -17,6 +17,14 @@ namespace opbox {
             case IO_LED_ON:
                 patt = {{1, 1s}};
                 break;
+            case IO_LED_BLINK_ONCE:
+                patt = {
+                    {0, 125ms},
+                    {1, 125ms},
+                    {0, 125ms},
+                    {0, 24h}
+                };
+                break;
             case IO_LED_BLINK_TWICE:
                 patt = {
                     {0, 125ms},
@@ -165,7 +173,13 @@ namespace opbox {
 
         if(_forceFakeGpio || !(USE_REAL_GPIO))
         {
-            return (GPIOState) std::stoi(StringInFile(_fakeGpioFile).read());
+            StringInFile in(_fakeGpioFile);
+            if(!in.exists())
+            {
+                return GPIOState::LOW;
+            }
+
+            return (GPIOState) std::stoi(in.read());
         }
 
         #if USE_REAL_GPIO

@@ -521,6 +521,7 @@ namespace opbox {
     {
         IO_LED_OFF,
         IO_LED_ON,
+        IO_LED_BLINK_ONCE,
         IO_LED_BLINK_TWICE,
         IO_LED_FAST_BLINK,
         IO_LED_SLOW_BLINK

@@ -6,6 +6,12 @@ set(THREADS_PREFER_PTHREAD_FLAG ON)
 find_package(Threads REQUIRED)
 
 #
+# libnotify
+#
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(LIBNOTIFY REQUIRED libnotify)
+
+#
 # yaml-cpp
 #
 include(FetchContent)
@@ -18,18 +24,32 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(yaml-cpp)
 
 #
-# Compile src files for opboxmain
+# Compile src files for opbox lib
 #
 
 add_library(opbox_lib
     src/opboxio.cpp
     src/opboxutil.cpp
-    src/opboxcomms.cpp)
-target_include_directories(opbox_lib PUBLIC include)
-target_link_libraries(opbox_lib PUBLIC serial_library)
+    src/opboxcomms.cpp
+    src/opboxlinux.cpp)
+target_include_directories(opbox_lib PUBLIC include ${LIBNOTIFY_INCLUDE_DIRS})
+target_link_libraries(opbox_lib PUBLIC serial_library ${LIBNOTIFY_LIBRARIES})
+target_compile_options(opbox_lib PRIVATE ${LIBNOTIFY_CFLAGS_OTHER})
+
+#
+# opboxalert
+#
+
+find_package(Qt5 REQUIRED COMPONENTS Widgets)
+add_executable(opbox_alert src/opboxalert.cpp)
+target_link_libraries(opbox_alert
+    PUBLIC opbox_lib Qt5::Widgets)
+
+#
+# opboxmain
+#
 
 add_executable(opbox_main src/main.cpp)
-target_include_directories(opbox_main PUBLIC include)
 target_link_libraries(opbox_main 
     PUBLIC opbox_lib yaml-cpp::yaml-cpp
     PRIVATE Threads::Threads)
@@ -38,12 +58,11 @@ target_link_libraries(opbox_main
 # Compile src files for testnotification
 #
 
-find_package(PkgConfig REQUIRED)
-pkg_check_modules(LIBNOTIFY REQUIRED libnotify)
+
 add_executable(test_notification src/testnotification.cpp)
+target_include_directories(test_notification PUBLIC ${LIBNOTIFY_INCLUDE_DIRS})
 target_link_libraries(test_notification PUBLIC ${LIBNOTIFY_LIBRARIES})
 target_compile_options(test_notification PRIVATE ${LIBNOTIFY_CFLAGS_OTHER})
-
 
 #
 # Compile test files

@@ -3,6 +3,7 @@
 #include "opbox_software/opboxlogging.hpp"
 #include "opbox_software/opboxutil.hpp"
 #include "opbox_software/opboxcomms.hpp"
+#include "opbox_software/opboxlinux.hpp"
 
 #define KS_PIN 0
 #define KS_RED_LED 1
@@ -22,8 +23,8 @@ namespace opbox
         Opbox()
          : _loopRunning(true),
            _settings(readOpboxSettings()),
-           _ksLeds(KS_GREEN_LED, KS_YELLOW_LED, KS_RED_LED)
-        //    _killSwitch(KS_PIN, std::bind(&Opbox::killButtonStateChanged, this, _1))
+           _ksLeds(KS_GREEN_LED, KS_YELLOW_LED, KS_RED_LED),
+           _killSwitch(KS_PIN, std::bind(&Opbox::killButtonStateChanged, this, _1))
         {
             //initialize links to robots
             for(std::string client : _settings.clients)
@@ -47,30 +48,40 @@ namespace opbox
                         const LeakState& leakState)
                     {
                         this->handleStatusFromRobot(client, robotKillState, thrusterState, diagState, leakState);
+                    },
+
+                    [this, client] (const bool& connected)
+                    {
+                        this->handleRobotConnectionStateChange(client, connected);
                     }
                 );
             }
 
             //install signal handler
             signal(SIGINT, &signalHandler);
+            sendSystemNotification(NotificationType::NOTIFICATION_WARNING, "Opbox System", "Opbox Software started.");
         }
 
 
         int loop()
         {
             //use ios to indicate program coming up
+            _ioMutex.lock();
             _buzzer.setState(IOBuzzerState::IO_BUZZER_CHIRP_TWICE);
             _buzzer.setNextState(IOBuzzerState::IO_BUZZER_OFF, 1s);
             _usrLed.setState(IOLedState::IO_LED_BLINK_TWICE);
             _usrLed.setNextState(IOLedState::IO_LED_OFF, 1s);
             _ksLeds.setAllStates(IOLedState::IO_LED_SLOW_BLINK);
+            _ioMutex.unlock();
 
             OPBOX_LOG_INFO("Opbox initialized, loop starting");
             
             bool loopRunning = true;
             do
             {
-                std::this_thread::sleep_for(1ms);
+                std::this_thread::sleep_for(250ms);
+
+                //update looprunning
                 _loopRunningMutex.lock();
                 loopRunning = _loopRunning;
                 _loopRunningMutex.unlock();
@@ -91,9 +102,74 @@ namespace opbox
         
         private:
 
-        void killButtonStateChanged(int newKillButtonState)
+        void ioActuatorAlert(const NotificationType& type)
+        {
+            _ioMutex.lock();
+
+            //actuate IOs based on notification type
+            switch(type)
+            {
+                case NOTIFICATION_WARNING:
+                    //buzzer notification
+                    _buzzer.setState(IOBuzzerState::IO_BUZZER_CHIRP);
+                    _buzzer.setNextState(IOBuzzerState::IO_BUZZER_OFF, 500ms);
+
+                    //user led
+                    _usrLed.setState(IOLedState::IO_LED_BLINK_ONCE);
+                    _usrLed.setNextState(IOLedState::IO_LED_OFF, 500ms);
+                    break;
+                case NOTIFICATION_ERROR:
+                    //buzzer notification
+                    _buzzer.setState(IOBuzzerState::IO_BUZZER_CHIRP_TWICE);
+                    _buzzer.setNextState(IOBuzzerState::IO_BUZZER_OFF, 500ms);
+
+                    //user led
+                    _usrLed.setState(IOLedState::IO_LED_BLINK_TWICE);
+                    _usrLed.setNextState(IOLedState::IO_LED_SLOW_BLINK, 500ms);
+                    break;
+                case NOTIFICATION_FATAL:
+                    //buzzer notification
+                    _buzzer.setState(IOBuzzerState::IO_BUZZER_PANIC);
+                    _buzzer.setNextState(IOBuzzerState::IO_BUZZER_OFF, 4s);
+
+                    //user led
+                    _usrLed.setState(IOLedState::IO_LED_FAST_BLINK);
+                    break;
+            }
+
+            _ioMutex.unlock();
+        }
+
+
+        std::string getPrimaryRobot(void)
+        {
+            _commMutex.lock();
+            if(_primaryRobot.empty())
+            {
+                for(auto it = _serialProcMap.begin(); it != _serialProcMap.end(); it++)
+                {
+                    if(_serialProcMap.at(it->first)->connected())
+                    {
+                        _primaryRobot = it->first;
+                        sendSystemNotification(NOTIFICATION_WARNING, "Primary Robot Changed", "Primary Robot changed to " + _primaryRobot);
+                    }
+                }
+            }
+            
+            _commMutex.unlock();
+            return _primaryRobot;
+        }
+
+
+        void killButtonStateChanged(const int& newKillButtonState)
         {
             OPBOX_LOG_INFO("Kill button state changed to %d", newKillButtonState);
+            ioActuatorAlert(NOTIFICATION_WARNING);
+            
+            std::string robot = getPrimaryRobot(); //needs to be its own line because mutexes
+            _commMutex.lock();
+            _serialProcMap.at(robot)->sendKillButtonState((KillSwitchState) newKillButtonState);
+            _commMutex.unlock();
         }
 
 
@@ -103,7 +179,11 @@ namespace opbox
             const std::string& sensor,
             const std::string& desc)
         {
-
+            sendSystemNotification(type,
+                notificationTypeToString(type) + " from  " + robot + "(" + sensor + ")",
+                desc);
+            
+            ioActuatorAlert(type);
         }
 
 
@@ -117,6 +197,21 @@ namespace opbox
 
         }
 
+
+        void handleRobotConnectionStateChange(const std::string& robot, const bool& connected)
+        {
+            std::string
+                verb = (connected ? "connected" : "disconnected"),
+                desc = robot + " has " + verb + ".";
+            
+            OPBOX_LOG_INFO("%s", desc.c_str());
+
+            sendSystemNotification(
+                NotificationType::NOTIFICATION_WARNING,
+                robot + " " + verb,
+                desc);
+        }
+
         //loop
         std::mutex _loopRunningMutex;
         bool _loopRunning = true;
@@ -125,13 +220,16 @@ namespace opbox
         OpboxSettings _settings;
 
         //IO
+        std::mutex _ioMutex;
         IOBuzzer _buzzer;
         IOUsrLed _usrLed;
         KillSwitchLeds _ksLeds;
-        // IOGpioSensor<int> _killSwitch;
+        IOGpioSensor<int> _killSwitch;
 
         //communication
+        std::mutex _commMutex;
         SerialProcMap _serialProcMap;
+        std::string _primaryRobot;
     };
 }
 
@@ -148,6 +246,9 @@ void signalHandler(int signum)
 
 int main(int argc, char **argv)
 {
+    opbox::initializeNotifications();
     _opbox = std::make_unique<opbox::Opbox>();
-    return _opbox->loop();
+    int retval = _opbox->loop();
+    opbox::deinitializeNotifications();
+    return retval;
 }

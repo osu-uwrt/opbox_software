@@ -32,11 +32,13 @@ namespace opbox
         const NotificationHandler& notificationHandler,
         const KillButtonHandler& killButtonHandler,
         const StatusHandler& statusHandler,
+        const ConnectionStateHandler& conStateHandler,
         const OpboxFrameId& bumpFrameId,
         const std::string& debugName)
      : handleNotification(notificationHandler),
        handleKillButton(killButtonHandler),
        handleStatus(statusHandler),
+       handleConnectionStateChange(conStateHandler),
        threadRunning(true),
        bumpFrameId(bumpFrameId),
        debugName(debugName)
@@ -216,6 +218,7 @@ namespace opbox
     void OpboxRobotLink::threadFunc(void)
     {
         OPBOX_LOG_DEBUG("%s: OpboxRobotLink thread starting", debugName.c_str());
+        bool connectionState = false;
         while(threadRunning)
         {
             auto now = std::chrono::system_clock::now();
@@ -230,6 +233,14 @@ namespace opbox
             KillSwitchState a = (KillSwitchState) serialProc->getFieldValue<uint8_t>(KILL_BUTTON_STATE);
             OPBOX_LOG_DEBUG("%s: kill button state is currently %d", debugName.c_str(), a);
 
+            bool newConnectionState = connected();
+            if(connectionState != newConnectionState)
+            {
+                handleConnectionStateChange(newConnectionState);
+            }
+
+            connectionState = newConnectionState;
+
             //this gives other threads chance to aquire mutexes for sending data as std::mutex is not necessarily fair
             std::this_thread::sleep_for(5ms); 
         }
@@ -242,12 +253,14 @@ namespace opbox
         const std::string& address,
         int port,
         const NotificationHandler& notificationHandler,
-        const StatusHandler& statusHandler)
+        const StatusHandler& statusHandler,
+        const ConnectionStateHandler& connectionStateHandler)
      : OpboxRobotLink(
         std::move(buildTransceiver(address, port)),
         notificationHandler,
         &defaultKillButtonHandler,
         statusHandler,
+        connectionStateHandler,
         OPBOX_STATUS_FRAME,
         "RobotLink")
     { }
@@ -268,10 +281,10 @@ namespace opbox
         if(address == "localhost")
         {
             OPBOX_LOG_DEBUG("RobotLink using LinuxDualUDPTransceiver for localhost");
-            return std::make_unique<serial_library::LinuxDualUDPTransceiver>(address, port, port + 1, 0.1);
+            return std::make_unique<serial_library::LinuxDualUDPTransceiver>(address, port, port + 1, 0.1, true);
         }
 
-        return std::make_unique<serial_library::LinuxUDPTransceiver>(address, port, 0.1);
+        return std::make_unique<serial_library::LinuxUDPTransceiver>(address, port, 0.1, true);
     }
 
 
@@ -279,12 +292,14 @@ namespace opbox
         const std::string& address,
         int port,
         const NotificationHandler& notificationHandler,
-        const KillButtonHandler& killButtonHandler)
+        const KillButtonHandler& killButtonHandler,
+        const ConnectionStateHandler& connectionStateHandler)
      : OpboxRobotLink(
         buildTransceiver(address, port),
         notificationHandler,
         killButtonHandler,
         &defaultStatusHandler,
+        connectionStateHandler,
         ROBOT_STATUS_FRAME,
         "OpboxLink")
     { }
@@ -308,9 +323,9 @@ namespace opbox
         if(address == "localhost")
         {
             OPBOX_LOG_DEBUG("OpboxLink using LinuxDualUDPTransceiver for localhost");
-            return std::make_unique<serial_library::LinuxDualUDPTransceiver>(address, port + 1, port, 0.1);
+            return std::make_unique<serial_library::LinuxDualUDPTransceiver>(address, port + 1, port, 0.1, true);
         }
 
-        return std::make_unique<serial_library::LinuxUDPTransceiver>(address, port, 0.1);
+        return std::make_unique<serial_library::LinuxUDPTransceiver>(address, port, 0.1, true);
     }
 }

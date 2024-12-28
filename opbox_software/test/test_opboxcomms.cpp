@@ -27,12 +27,14 @@ class OpboxRobotLinkTest : public ::testing::Test
         robotLink = std::make_unique<opbox::RobotLink>(
             "localhost", 9000,
             std::bind(&OpboxRobotLinkTest::handleNotificationFromRobot, this, _1, _2, _3),
-            std::bind(&OpboxRobotLinkTest::handleStatusFromRobot, this, _1, _2, _3, _4));
+            std::bind(&OpboxRobotLinkTest::handleStatusFromRobot, this, _1, _2, _3, _4),
+            std::bind(&OpboxRobotLinkTest::handleConnectionStateChange, this, _1));
 
         opboxLink = std::make_unique<opbox::OpboxLink>(
             "localhost", 9000,
             std::bind(&OpboxRobotLinkTest::handleNotificationFromOpbox, this, _1, _2, _3),
-            std::bind(&OpboxRobotLinkTest::handleKillButtonFromOpbox, this, _1));
+            std::bind(&OpboxRobotLinkTest::handleKillButtonFromOpbox, this, _1),
+            std::bind(&OpboxRobotLinkTest::handleConnectionStateChange, this, _1));
     }
 
 
@@ -99,6 +101,8 @@ class OpboxRobotLinkTest : public ::testing::Test
         OPBOX_LOG_DEBUG("Kill button state %d received", killButtonState);
         latestKillButtonState = killButtonState;
     }
+
+    void handleConnectionStateChange(const bool& connected) { }
 
     Notification
         latestNotificationFromRobot,

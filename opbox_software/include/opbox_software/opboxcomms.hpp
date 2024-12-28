@@ -27,12 +27,14 @@ namespace opbox
         typedef std::function<void(const NotificationType&, const std::string&, const std::string&)> NotificationHandler;
         typedef std::function<void(const KillSwitchState&, const ThrusterState&, const DiagnosticState&, const LeakState&)> StatusHandler;
         typedef std::function<void(const KillSwitchState&)> KillButtonHandler;
+        typedef std::function<void(const bool&)> ConnectionStateHandler;
 
         OpboxRobotLink(
             std::unique_ptr<serial_library::SerialTransceiver> transceiver,
             const NotificationHandler& notificationHandler,
             const KillButtonHandler& killButtonHandler,
             const StatusHandler& statusHandler,
+            const ConnectionStateHandler& conStateHandler,
             const OpboxFrameId& bumpFrameId,
             const std::string& debugName);
 
@@ -48,7 +50,11 @@ namespace opbox
         
         //these are default functions which throw and should be overridden.
         virtual void sendKillButtonState(const KillSwitchState& state);
-        virtual void sendRobotState(const KillSwitchState& killState, const ThrusterState& thrusterState, const DiagnosticState& diagState, const LeakState& leakState);
+        virtual void sendRobotState(
+            const KillSwitchState& killState, 
+            const ThrusterState& thrusterState, 
+            const DiagnosticState& diagState, 
+            const LeakState& leakState);
 
         protected:
         serial_library::SerialProcessor::UniquePtr serialProc;
@@ -72,6 +78,7 @@ namespace opbox
         const NotificationHandler handleNotification;
         const KillButtonHandler handleKillButton;
         const StatusHandler handleStatus;
+        const ConnectionStateHandler handleConnectionStateChange;
         const std::string debugName;
 
         //thread
@@ -88,7 +95,8 @@ namespace opbox
             const std::string& address,
             int port,
             const NotificationHandler& notificationHandler,
-            const StatusHandler& statusHandler);
+            const StatusHandler& statusHandler,
+            const ConnectionStateHandler& connectionStateHandler);
         
         void sendKillButtonState(const KillSwitchState& state) override;
 
@@ -105,7 +113,8 @@ namespace opbox
             const std::string& address,
             int port,
             const NotificationHandler& notificationHandler,
-            const KillButtonHandler& killButtonHandler);
+            const KillButtonHandler& killButtonHandler,
+            const ConnectionStateHandler& connectionStateHandler);
         
         void sendRobotState(const KillSwitchState& killState, const ThrusterState& thrusterState, const DiagnosticState& diagState, const LeakState& leakState) override;
 
