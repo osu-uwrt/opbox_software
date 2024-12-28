@@ -11,7 +11,7 @@
 
 using namespace std::placeholders;
 
-typedef std::map<std::string, opbox::OpboxRobotLink::UniquePtr> SerialProcMap;
+typedef std::map<std::string, opbox::RobotLink::UniquePtr> SerialProcMap;
 void signalHandler(int signum);
 
 namespace opbox
@@ -25,10 +25,30 @@ namespace opbox
            _ksLeds(KS_GREEN_LED, KS_YELLOW_LED, KS_RED_LED)
         //    _killSwitch(KS_PIN, std::bind(&Opbox::killButtonStateChanged, this, _1))
         {
-            //initialize serial library
+            //initialize links to robots
             for(std::string client : _settings.clients)
             {
-                
+                _serialProcMap[client] = std::make_unique<opbox::RobotLink>(
+                    client,
+                    COMM_PORT,
+
+                    [this, client] (
+                        const NotificationType& type,
+                        const std::string& sensor,
+                        const std::string& desc)
+                    {
+                        this->handleNotificationFromRobot(client, type, sensor, desc);
+                    },
+
+                    [this, client] (
+                        const KillSwitchState& robotKillState,
+                        const ThrusterState& thrusterState,
+                        const DiagnosticState& diagState,
+                        const LeakState& leakState)
+                    {
+                        this->handleStatusFromRobot(client, robotKillState, thrusterState, diagState, leakState);
+                    }
+                );
             }
 
             //install signal handler
@@ -74,6 +94,27 @@ namespace opbox
         void killButtonStateChanged(int newKillButtonState)
         {
             OPBOX_LOG_INFO("Kill button state changed to %d", newKillButtonState);
+        }
+
+
+        void handleNotificationFromRobot(
+            const std::string& robot,
+            const NotificationType& type,
+            const std::string& sensor,
+            const std::string& desc)
+        {
+
+        }
+
+
+        void handleStatusFromRobot(
+            const std::string& robotName,
+            const KillSwitchState& robotKillState,
+            const ThrusterState& thrusterState,
+            const DiagnosticState& diagState,
+            const LeakState& leakState)
+        {
+
         }
 
         //loop

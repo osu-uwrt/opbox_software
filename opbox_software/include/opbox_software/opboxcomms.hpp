@@ -7,6 +7,7 @@
 #include <thread>
 
 #define HEARTBEAT_RATE 100ms
+#define COMM_PORT 8987
 
 // this is in ms
 #define STALE_TIME 500ms

@@ -18,7 +18,7 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(yaml-cpp)
 
 #
-# Compile src files
+# Compile src files for opboxmain
 #
 
 add_library(opbox_lib
@@ -33,6 +33,17 @@ target_include_directories(opbox_main PUBLIC include)
 target_link_libraries(opbox_main 
     PUBLIC opbox_lib yaml-cpp::yaml-cpp
     PRIVATE Threads::Threads)
+
+#
+# Compile src files for testnotification
+#
+
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(LIBNOTIFY REQUIRED libnotify)
+add_executable(test_notification src/testnotification.cpp)
+target_link_libraries(test_notification PUBLIC ${LIBNOTIFY_LIBRARIES})
+target_compile_options(test_notification PRIVATE ${LIBNOTIFY_CFLAGS_OTHER})
+
 
 #
 # Compile test files
