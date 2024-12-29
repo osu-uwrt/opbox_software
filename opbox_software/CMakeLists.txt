@@ -55,14 +55,27 @@ target_link_libraries(opbox_main
     PRIVATE Threads::Threads)
 
 #
-# Compile src files for testnotification
+# testnotification
 #
-
 
 add_executable(test_notification src/testnotification.cpp)
 target_include_directories(test_notification PUBLIC ${LIBNOTIFY_INCLUDE_DIRS})
 target_link_libraries(test_notification PUBLIC ${LIBNOTIFY_LIBRARIES})
 target_compile_options(test_notification PRIVATE ${LIBNOTIFY_CFLAGS_OTHER})
+
+#
+# testopboxalert
+#
+add_executable(test_opboxalert src/testopboxalert.cpp)
+target_link_libraries(test_opboxalert
+    PUBLIC opbox_lib)
+
+#
+# testopboxbrowser
+#
+add_executable(test_opboxbrowser src/testopboxbrowser.cpp)
+target_link_libraries(test_opboxbrowser
+    PUBLIC opbox_lib)
 
 #
 # Compile test files

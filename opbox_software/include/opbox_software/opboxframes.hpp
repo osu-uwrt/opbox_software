@@ -76,19 +76,28 @@ namespace opbox
         NOTIFICATION_FATAL
     };
 
+    const std::map<NotificationType, std::string> NOTIFICATION_TYPE_NAMES = {
+        { NOTIFICATION_WARNING, "NOTIFICATION_WARNING" },
+        { NOTIFICATION_ERROR, "NOTIFICATION_ERROR" },
+        { NOTIFICATION_FATAL, "NOTIFICATION_FATAL" }
+    };
+
     static std::string notificationTypeToString(const NotificationType& type)
     {
-        switch(type)
+        return NOTIFICATION_TYPE_NAMES.at(type);
+    }
+
+    static NotificationType notificationTypeFromString(const std::string& s)
+    {
+        for(auto it = NOTIFICATION_TYPE_NAMES.begin(); it != NOTIFICATION_TYPE_NAMES.end(); it++)
         {
-            case NOTIFICATION_WARNING:
-                return "NOTIFICATION_WARNING";
-            case NOTIFICATION_ERROR:
-                return "NOTIFICATION_ERROR";
-            case NOTIFICATION_FATAL:
-                return "NOTIFICATION_FATAL";
-            default:
-                return "BAD TYPE";
+            if(it->second == s)
+            {
+                return it->first;
+            }
         }
+
+        return NotificationType::NOTIFICATION_WARNING;
     }
 
     const char OPBOX_SYNC[] = "*";
