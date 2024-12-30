@@ -4,21 +4,22 @@
 
 TEST(TestOpboxIO, TestInFile)
 {
-    opbox::StringInFile inFile("test_files/a.txt");
+    opbox::StringInFile inFile(opbox::resolveAssetPath("test_files/a.txt"));
     ASSERT_TRUE(inFile.exists());
     ASSERT_EQ(inFile.read(), "A text");
 
-    opbox::StringInFile inFile2("test_files/b.txt");
+    opbox::StringInFile inFile2(opbox::resolveAssetPath("test_files/b.txt"));
     ASSERT_TRUE(inFile2.exists());
     ASSERT_EQ(inFile2.read(), "1");
 
-    opbox::StringInFile inFile3("test_files/asdf");
+    opbox::StringInFile inFile3(opbox::resolveAssetPath("test_files/asdf"));
     ASSERT_FALSE(inFile3.exists());
     ASSERT_EQ(inFile3.read(), "");
 }
 
-#define OUTFILE_TEST_FILE "test_files/c.txt"
+#define OUTFILE_TEST_FILE opbox::resolveAssetPath("test_files/c.txt")
 #define OUTFILE_TEST_DATA "hello!"
+
 
 TEST(TestOpboxIO, TestOutFile)
 {
@@ -28,7 +29,7 @@ TEST(TestOpboxIO, TestOutFile)
     if(f.exists())
     {
         //remove file
-        ASSERT_EQ(remove(OUTFILE_TEST_FILE), 0);
+        ASSERT_EQ(remove(OUTFILE_TEST_FILE.c_str()), 0);
     }
 
     ASSERT_FALSE(f.exists());
@@ -46,6 +47,15 @@ TEST(TestOpboxIO, TestOutFile)
     //test truncate
     outFile.write(OUTFILE_TEST_DATA);
     ASSERT_EQ(f.read(), OUTFILE_TEST_DATA);
+}
+
+TEST(TestOpboxIO, TestGetAssetPath)
+{
+    std::string 
+        asset = opbox::resolveAssetPath("test_files/some_text"),
+        text = opbox::StringInFile(asset).read();
+
+    ASSERT_EQ(text, "hello!");
 }
 
 TEST(TestOpboxIO, TestIOActuatorInt)
@@ -82,7 +92,7 @@ TEST(TestOpboxIO, TestIOUsrLedOff)
 {
     opbox::IOUsrLed led(true);
     led.setState(opbox::IOLedState::IO_LED_OFF);
-    opbox::StringInFile f(OPBOX_IO_BACKUP_LED_FILE);
+    opbox::StringInFile f(opbox::resolveAssetPath(OPBOX_IO_BACKUP_LED_FILE));
 
     //check for 2 seconds that file has a 0 in it
     std::this_thread::sleep_for(100ms);
@@ -98,7 +108,7 @@ TEST(TestOpboxIO, TestIOUsrLedOn)
 {
     opbox::IOUsrLed led(true);
     led.setState(opbox::IOLedState::IO_LED_ON);
-    opbox::StringInFile f(OPBOX_IO_BACKUP_LED_FILE);
+    opbox::StringInFile f(opbox::resolveAssetPath(OPBOX_IO_BACKUP_LED_FILE));
 
     //check for 2 seconds that file has a 1 in it
     std::this_thread::sleep_for(100ms);
@@ -116,7 +126,7 @@ TEST(TestOpboxIO, TestIOBuzzerOff)
 {
     opbox::IOBuzzer buzzer(true);
     buzzer.setState(opbox::IOBuzzerState::IO_BUZZER_OFF);
-    opbox::StringInFile f(OPBOX_IO_BACKUP_BUZZER_FILE);
+    opbox::StringInFile f(opbox::resolveAssetPath(OPBOX_IO_BACKUP_BUZZER_FILE));
 
     std::this_thread::sleep_for(25ms);
 
@@ -133,7 +143,7 @@ TEST(TestOpboxIO, TestIOBuzzerChirp)
 {
     opbox::IOBuzzer buzzer(true);
     buzzer.setState(opbox::IOBuzzerState::IO_BUZZER_CHIRP);
-    opbox::StringInFile f(OPBOX_IO_BACKUP_BUZZER_FILE);
+    opbox::StringInFile f(opbox::resolveAssetPath(OPBOX_IO_BACKUP_BUZZER_FILE));
 
     std::this_thread::sleep_for(25ms);
     ASSERT_EQ(f.read(), "1");
@@ -153,7 +163,7 @@ TEST(TestOpboxIO, TestIOScheduling)
     led.setState(opbox::IOLedState::IO_LED_ON);
     led.setNextState(opbox::IOLedState::IO_LED_OFF, 500ms);
 
-    opbox::StringInFile f(OPBOX_IO_BACKUP_LED_FILE);
+    opbox::StringInFile f(opbox::resolveAssetPath(OPBOX_IO_BACKUP_LED_FILE));
     
     //know that normal setting states work if others pass. For this test just schedule a change
     std::this_thread::sleep_for(400ms);
@@ -173,7 +183,7 @@ TEST(TestOpboxIO, TestIOSchedulingInterval)
     led.setNextState(opbox::IOLedState::IO_LED_ON, 500ms);
     led.setNextState(opbox::IOLedState::IO_LED_OFF, 500ms);
 
-    opbox::StringInFile f(OPBOX_IO_BACKUP_LED_FILE);
+    opbox::StringInFile f(opbox::resolveAssetPath(OPBOX_IO_BACKUP_LED_FILE));
     
     //know that normal setting states work if others pass. For this test just schedule a change
     std::this_thread::sleep_for(250ms);
@@ -194,7 +204,7 @@ TEST(TestOpboxIO, TestIOQueueInterruptClearing)
     led.setState(opbox::IOLedState::IO_LED_ON);
     led.setNextState(opbox::IOLedState::IO_LED_OFF, 750ms);
     led.setNextState(opbox::IOLedState::IO_LED_ON, 250ms); //test that the queue is wiped. this should be cleared
-    opbox::StringInFile f(OPBOX_IO_BACKUP_LED_FILE);
+    opbox::StringInFile f(opbox::resolveAssetPath(OPBOX_IO_BACKUP_LED_FILE));
     
     //know that normal setting states work if others pass. For this test just schedule a change
     std::this_thread::sleep_for(400ms);
@@ -219,7 +229,7 @@ TEST(TestOpboxIO, TestIOQueueInterruptNonClearing)
     led.setState(opbox::IOLedState::IO_LED_ON);
     led.setNextState(opbox::IOLedState::IO_LED_OFF, 750ms);
     led.setNextState(opbox::IOLedState::IO_LED_ON, 500ms); //test that the queue is wiped. this should be cleared
-    opbox::StringInFile f(OPBOX_IO_BACKUP_LED_FILE);
+    opbox::StringInFile f(opbox::resolveAssetPath(OPBOX_IO_BACKUP_LED_FILE));
 
     //know that normal setting states work if others pass. For this test just schedule a change
     std::this_thread::sleep_for(400ms);
@@ -238,8 +248,8 @@ TEST(TestOpboxIO, TestIOQueueInterruptNonClearing)
 
 TEST(TestOpboxIO, TestGPIOOutput)
 {
-    opbox::GPIOOutput gpout(1, true, "./test_files/test_gpio");
-    opbox::StringInFile f("./test_files/test_gpio");
+    opbox::GPIOOutput gpout(1, true, opbox::resolveAssetPath(OPBOX_IO_DEFAULT_FAKE_GPIO_FILE));
+    opbox::StringInFile f(opbox::resolveAssetPath(OPBOX_IO_DEFAULT_FAKE_GPIO_FILE));
     gpout.write(0);
     ASSERT_TRUE(f.exists());
     ASSERT_EQ(f.read(), "0");
@@ -249,8 +259,8 @@ TEST(TestOpboxIO, TestGPIOOutput)
 
 TEST(TestOpboxIO, TestGPIOInput)
 {
-    opbox::GPIOInput gpin(1, true, "./test_files/test_gpio");
-    opbox::StringOutFile f("./test_files/test_gpio");
+    opbox::GPIOInput gpin(1, true, opbox::resolveAssetPath(OPBOX_IO_DEFAULT_FAKE_GPIO_FILE));
+    opbox::StringOutFile f(opbox::resolveAssetPath(OPBOX_IO_DEFAULT_FAKE_GPIO_FILE));
     f.write("1");
     ASSERT_EQ(gpin.read(), 1);
     f.write("0");

@@ -3,6 +3,49 @@
 namespace opbox {
 
     //
+    // Random utility function
+    //
+    std::string resolveAssetPath(const std::string& assetPath)
+    {
+        char *prefixPath = getenv("AMENT_PREFIX_PATH");
+        if(!prefixPath)
+        {
+            OPBOX_LOG_ERROR("Env var AMENT_PREFIX_PATH not found!");
+            return assetPath;
+        }
+
+        std::string prefixPathStr = prefixPath;
+
+        size_t previousPos = 0;
+        for(size_t pos = prefixPathStr.find(":", previousPos); 
+            pos != std::string::npos; 
+            pos = prefixPathStr.find(":", previousPos))
+        {
+            std::string path = prefixPathStr.substr(previousPos, pos);
+            size_t rpos = path.rfind('/');
+            
+            OPBOX_LOG_DEBUG("Get asset path checking path %s", path.c_str());
+            
+            if(rpos != std::string::npos)
+            {
+                std::string package = path.substr(rpos + 1);
+                OPBOX_LOG_DEBUG("Got package name for %s as %s", path.c_str(), package.c_str());
+                if(package == "opbox_software")
+                {
+                    std::string asset = path + "/share/" + package + "/" + assetPath;
+                    OPBOX_LOG_DEBUG("Get asset path as %s", asset.c_str());
+                    return asset;
+                }
+            }
+
+            previousPos = pos + 1;
+        }
+
+        OPBOX_LOG_ERROR("Unable to find share directory for opbox_software!");
+        return assetPath;
+    }
+
+    //
     // IOLed
     //
 
@@ -58,7 +101,11 @@ namespace opbox {
     //
 
     IOBuzzer::IOBuzzer(bool forceBackup)
-     : IOController(makeFileActuator<int>(0, OPBOX_IO_PRIMARY_BUZZER_FILE, OPBOX_IO_BACKUP_BUZZER_FILE, forceBackup)) { }
+     : IOController(makeFileActuator<int>(
+        0, 
+        opbox::resolveAssetPath(OPBOX_IO_PRIMARY_BUZZER_FILE), 
+        opbox::resolveAssetPath(OPBOX_IO_BACKUP_BUZZER_FILE), 
+        forceBackup)) { }
 
 
     ActuatorPattern<int> IOBuzzer::getStatePattern(const IOBuzzerState& state) const
@@ -251,9 +298,9 @@ namespace opbox {
     // KillSwitchLeds
     //
     KillSwitchLeds::KillSwitchLeds(int greenPin, int yellowPin, int redPin, bool forceFakeGpio)
-     : _red(redPin, GPIOState::LOW, forceFakeGpio, "./red_led"),
-       _yellow(yellowPin, GPIOState::LOW, forceFakeGpio, "./yellow_led"),
-       _green(greenPin, GPIOState::LOW, forceFakeGpio, "./green_led") { }
+     : _red(redPin, GPIOState::LOW, forceFakeGpio, resolveAssetPath("red_led")),
+       _yellow(yellowPin, GPIOState::LOW, forceFakeGpio, resolveAssetPath("yellow_led")),
+       _green(greenPin, GPIOState::LOW, forceFakeGpio, resolveAssetPath("green_led")) { }
 
     void KillSwitchLeds::setAllStates(IOLedState state)
     {
@@ -278,27 +325,5 @@ namespace opbox {
     void KillSwitchLeds::setGreenState(IOLedState state)
     {
         _green.setState(state);
-    }
-
-    //
-    // Random utility function
-    //
-    std::string resolveAssetPath(const std::string& assetPath)
-    {
-        //look in build first (devel asset location)
-        if(StringInFile(assetPath).exists())
-        {
-            return assetPath;
-        }
-
-        //now look in install directory 
-        std::string installAssetPath = "/usr/local/opbox/" + assetPath;
-        if(StringInFile(installAssetPath).exists())
-        {
-            return installAssetPath;
-        }
-
-        OPBOX_LOG_ERROR("Asset %s could not be found! checked path %s and install path %s", assetPath.c_str(), assetPath.c_str(), installAssetPath.c_str());
-        throw std::runtime_error("Asset " + assetPath + " could not be found!");
     }
 }

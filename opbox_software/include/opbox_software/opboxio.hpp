@@ -19,6 +19,11 @@
 using namespace std::chrono_literals;
 
 namespace opbox {
+    
+    //
+    // Random utility function
+    //
+    std::string resolveAssetPath(const std::string& assetPath);
 
     class NamedObject
     {
@@ -543,7 +548,11 @@ namespace opbox {
     {
         public:
         IOUsrLed(bool forceBackup = false)
-         : IOLed(makeFileActuator(0, OPBOX_IO_PRIMARY_LED_FILE, OPBOX_IO_BACKUP_LED_FILE, forceBackup)) { }
+         : IOLed(makeFileActuator(
+            0, 
+            resolveAssetPath(OPBOX_IO_PRIMARY_LED_FILE), 
+            resolveAssetPath(OPBOX_IO_BACKUP_LED_FILE), 
+            forceBackup)) { }
     };
 
 
@@ -605,10 +614,4 @@ namespace opbox {
          : IOSensor<T>(std::make_unique<GPIOInput>(pin, forceFakeGpio, fakeGpioFile), callback)
          { }
     };
-
-
-    //
-    // Random utility function
-    //
-    std::string resolveAssetPath(const std::string& assetPath);
 }
