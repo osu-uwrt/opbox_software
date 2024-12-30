@@ -21,7 +21,7 @@ namespace opbox {
             pos != std::string::npos; 
             pos = prefixPathStr.find(":", previousPos))
         {
-            std::string path = prefixPathStr.substr(previousPos, pos);
+            std::string path = prefixPathStr.substr(previousPos, pos - previousPos);
             size_t rpos = path.rfind('/');
             
             OPBOX_LOG_DEBUG("Get asset path checking path %s", path.c_str());
