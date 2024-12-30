@@ -1,0 +1,6 @@
+/**/opbox_ros_client:
+  ros__parameters:
+    opbox_address: opbox
+    opbox_port: 9444
+
+    

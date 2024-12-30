@@ -51,7 +51,11 @@ add_library(opbox_lib
     src/opboxcomms.cpp
     src/opboxlinux.cpp)
 
-target_include_directories(opbox_lib PUBLIC include ${LIBNOTIFY_INCLUDE_DIRS})
+target_include_directories(opbox_lib PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+    $<INSTALL_INTERFACE:include>
+    ${LIBNOTIFY_INCLUDE_DIRS})
+
 target_link_libraries(opbox_lib ${LIBNOTIFY_LIBRARIES})
 
 ament_target_dependencies(opbox_lib
@@ -102,6 +106,19 @@ target_link_libraries(test_opboxbrowser
 #
 # installs
 #
+
+#export opbox lib properly
+install(
+    TARGETS opbox_lib
+    EXPORT opbox_libTargets
+    DESTINATION lib/${PROJECT_NAME})
+
+install(DIRECTORY include/
+    DESTINATION include)
+
+ament_export_targets(opbox_libTargets HAS_LIBRARY_TARGET)
+ament_export_dependencies(serial_library)
+
 install(TARGETS opbox_alert opbox_main test_notification test_opboxalert test_opboxbrowser
     DESTINATION lib/${PROJECT_NAME})
 
@@ -118,12 +135,19 @@ if(BUILD_TESTING)
     # Install test files to install dir for production testing
     install(DIRECTORY test/test_files
         DESTINATION ${PROJECT_NAME})
+
     file(GLOB test_src test/*.cpp)
+
     add_executable(opbox_test ${test_src})
-    target_include_directories(opbox_test PUBLIC include)
+
+    target_include_directories(opbox_test PUBLIC
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+        $<INSTALL_INTERFACE:include>)
+
     target_link_libraries(opbox_test
         PUBLIC gtest opbox_lib
         PRIVATE Threads::Threads)
+
     install(TARGETS opbox_test
         DESTINATION lib/${PROJECT_NAME})
 endif()
