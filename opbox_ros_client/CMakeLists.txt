@@ -10,10 +10,12 @@ find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(opbox_software REQUIRED)
 find_package(serial_library REQUIRED)
+find_package(riptide_msgs2 REQUIRED)
 
 set(deps
   rclcpp
-  opbox_software)
+  opbox_software
+  riptide_msgs2)
 
 add_executable(opbox_ros_client
   src/main.cpp)

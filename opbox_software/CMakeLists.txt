@@ -125,6 +125,9 @@ install(TARGETS opbox_alert opbox_main test_notification test_opboxalert test_op
 install(DIRECTORY test/test_files
     DESTINATION share/${PROJECT_NAME})
 
+install(DIRECTORY config
+    DESTINATION share/${PROJECT_NAME})
+
 #
 # Compile test files
 #

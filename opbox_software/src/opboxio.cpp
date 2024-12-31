@@ -5,13 +5,14 @@ namespace opbox {
     //
     // Random utility function
     //
-    std::string resolveAssetPath(const std::string& assetPath)
+
+    std::string resolveInstallPath(const std::string& installPath)
     {
         char *prefixPath = getenv("AMENT_PREFIX_PATH");
         if(!prefixPath)
         {
             OPBOX_LOG_ERROR("Env var AMENT_PREFIX_PATH not found!");
-            return assetPath;
+            return installPath;
         }
 
         std::string prefixPathStr = prefixPath;
@@ -24,7 +25,7 @@ namespace opbox {
             std::string path = prefixPathStr.substr(previousPos, pos - previousPos);
             size_t rpos = path.rfind('/');
             
-            OPBOX_LOG_DEBUG("Get asset path checking path %s", path.c_str());
+            OPBOX_LOG_DEBUG("Get install path checking path %s", path.c_str());
             
             if(rpos != std::string::npos)
             {
@@ -32,8 +33,8 @@ namespace opbox {
                 OPBOX_LOG_DEBUG("Got package name for %s as %s", path.c_str(), package.c_str());
                 if(package == "opbox_software")
                 {
-                    std::string asset = path + "/share/" + package + "/" + assetPath;
-                    OPBOX_LOG_DEBUG("Get asset path as %s", asset.c_str());
+                    std::string asset = path + "/" + installPath;
+                    OPBOX_LOG_DEBUG("Get install path as %s", asset.c_str());
                     return asset;
                 }
             }
@@ -41,8 +42,20 @@ namespace opbox {
             previousPos = pos + 1;
         }
 
-        OPBOX_LOG_ERROR("Unable to find share directory for opbox_software!");
-        return assetPath;
+        OPBOX_LOG_ERROR("Unable to find install directory for opbox_software!");
+        return installPath;
+    }
+
+
+    std::string resolveAssetPath(const std::string& assetPath)
+    {
+        return resolveInstallPath("share/opbox_software/" + assetPath);
+    }
+
+
+    std::string resolveProgramPath(const std::string& programPath)
+    {
+        return resolveInstallPath("lib/opbox_software/" + programPath);
     }
 
     //

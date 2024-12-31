@@ -11,15 +11,33 @@
 
 namespace opbox
 {
+    typedef std::function<void(int)> ProcessReturnHandler;
+
     bool initializeNotifications(void);
     void sendSystemNotification(const NotificationType& notificationType, const std::string& title, const std::string& desc);
     void deinitializeNotifications(void);
 
+    static void genericReturnCodeHandler(int returnCode) { };
+
+    void alert(
+        const NotificationType& type, 
+        const std::string& header,
+        const std::string& body,
+        const std::string& button1Text,
+        const std::string& button2Text = "",
+        const ProcessReturnHandler& returnHandler = &genericReturnCodeHandler);
+    
+    void alertThread(
+        const NotificationType& type, 
+        const std::string& header,
+        const std::string& body,
+        const std::string& button1Text,
+        const std::string& button2Text,
+        const ProcessReturnHandler& returnHandler);
+
     class Subprocess
     {
         public:
-        typedef std::function<void(int)> ProcessReturnHandler;
-
         Subprocess(
             const std::string& program,
             const std::vector<std::string>& args,

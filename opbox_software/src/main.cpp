@@ -29,9 +29,11 @@ namespace opbox
             //initialize links to robots
             for(std::string client : _settings.clients)
             {
+                OPBOX_LOG_INFO("Connecting to %s on port %d", client.c_str(), _settings.clientPort);
+
                 _serialProcMap[client] = std::make_unique<opbox::RobotLink>(
                     client,
-                    COMM_PORT,
+                    _settings.clientPort,
 
                     [this, client] (
                         const NotificationType& type,
@@ -179,10 +181,15 @@ namespace opbox
             const std::string& sensor,
             const std::string& desc)
         {
+            //system notification
             sendSystemNotification(type,
                 notificationTypeToString(type) + " from  " + robot + "(" + sensor + ")",
                 desc);
             
+            //window notification
+            alert(type, robot + ": " + sensor + " alert", desc, "OK");
+
+            //io notification
             ioActuatorAlert(type);
         }
 
@@ -210,6 +217,32 @@ namespace opbox
                 NotificationType::NOTIFICATION_WARNING,
                 robot + " " + verb,
                 desc);
+
+            if(connected)
+            {
+                //stop browser process if it is running
+                if(_browserProcess && _browserProcess->running())
+                {
+                    _browserProcess->kill();
+                    _browserProcess->wait();
+                }
+
+                std::string browserHost = _settings.customDiagServerIp;
+                if(!_settings.useCustomDiagServerIp)
+                {
+                    browserHost = robot;
+                }
+
+                //start new browswer process
+                std::string url = "http://" + browserHost + ":" + std::to_string(_settings.diagServerPort);
+                std::vector<std::string> args = { url, "--kiosk" }; //"kiosk" starts fullscreen
+                OPBOX_LOG_DEBUG("Starting browser with url %s", url.c_str());
+
+                _browserProcess = std::make_unique<Subprocess>(
+                    "/usr/bin/sensible-browser", args);
+                
+                _browserProcess->run();
+            }
         }
 
         //loop
@@ -218,6 +251,9 @@ namespace opbox
 
         //settings
         OpboxSettings _settings;
+
+        //diagnostics web server
+        std::unique_ptr<Subprocess> _browserProcess;
 
         //IO
         std::mutex _ioMutex;

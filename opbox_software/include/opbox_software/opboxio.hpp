@@ -23,7 +23,9 @@ namespace opbox {
     //
     // Random utility function
     //
+    std::string resolveInstallPath(const std::string& installPath);
     std::string resolveAssetPath(const std::string& assetPath);
+    std::string resolveProgramPath(const std::string& programPath);
 
     class NamedObject
     {
@@ -448,7 +450,7 @@ namespace opbox {
         {
             _memberMutex.lock();
             T state = _input->read(),
-              newState = state;
+            newState = state;
             _memberMutex.unlock();
 
             while(_threadRunning)

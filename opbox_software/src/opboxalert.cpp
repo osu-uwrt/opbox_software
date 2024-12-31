@@ -212,7 +212,7 @@ int alertWindow(int argc, char **argv, const ArgMap& params)
 ArgMap readArgs(int argc, char **argv)
 {
     ArgMap params(DEFAULT_ARGS);
-    for(int i = 0; i < argc - 1; i++)
+    for(int i = 0; i < argc; i++)
     {
         std::string arg = argv[i];
         if(ARG_FLAGS.find(arg) != ARG_FLAGS.end()) //if argument is a flag...

@@ -1,7 +1,14 @@
 #include <rclcpp/rclcpp.hpp>
+#include <riptide_msgs2/msg/kill_switch_report.hpp>
+#include <riptide_msgs2/srv/send_opbox_notification.hpp>
 #include "opbox_software/opboxcomms.hpp"
 
 using namespace std::placeholders;
+
+#define KILL_BUTTON_TOPIC "stuff"
+#define NOTIFICATION_SRV_NAME "send_opbox_notification"
+
+typedef riptide_msgs2::srv::SendOpboxNotification SendOpboxNotification;
 
 class OpboxRosClient : public rclcpp::Node
 {
@@ -33,6 +40,14 @@ class OpboxRosClient : public rclcpp::Node
             std::bind(&OpboxRosClient::handleNotification, this, _1, _2, _3),
             std::bind(&OpboxRosClient::handleNewKillButtonState, this, _1),
             std::bind(&OpboxRosClient::handleNewConnectionState, this, _1));
+        
+        //ROS stuff
+        killButtonPublisher = create_publisher<riptide_msgs2::msg::KillSwitchReport>(KILL_BUTTON_TOPIC, 10);
+
+        sendOpboxNotificationSrv = create_service<SendOpboxNotification>(
+            NOTIFICATION_SRV_NAME,
+            std::bind(&OpboxRosClient::sendNotificationToOpbox, this, _1, _2));
+
 
         RCLCPP_INFO(get_logger(), "Opbox ROS client started.");
     }
@@ -48,8 +63,11 @@ class OpboxRosClient : public rclcpp::Node
 
     void handleNewKillButtonState(const opbox::KillSwitchState& killButtonState)
     {
-        RCLCPP_INFO(get_logger(),
-            "New kill button state %d received", killButtonState);
+        riptide_msgs2::msg::KillSwitchReport ksr;
+        ksr.sender_id = riptide_msgs2::msg::KillSwitchReport::KILL_SWITCH_TOPSIDE_BUTTON;
+        ksr.switch_asserting_kill = killButtonState == opbox::KillSwitchState::KILLED;
+        ksr.switch_needs_update = false;
+        killButtonPublisher->publish(ksr);
     }
 
     void handleNewConnectionState(const bool& connected)
@@ -58,7 +76,26 @@ class OpboxRosClient : public rclcpp::Node
             "Opbox host %s", (connected ? "connected" : "not connected"));
     }
 
+    void sendNotificationToOpbox(
+        const std::shared_ptr<SendOpboxNotification::Request> request,
+        std::shared_ptr<SendOpboxNotification::Response> response)
+    {
+        if(opboxLink->connected())
+        {
+            response->success = opboxLink->sendNotification((opbox::NotificationType) request->severity, request->sensor, request->description);
+            response->message = (response->success ? 
+                "Success" : "Opbox is connected, but notification was not acknowledged.");
+        } else
+        {
+            response->success = false;
+            response->message = "Cannot send notification because opbox is not connected.";
+        }
+    }
+
+
     opbox::OpboxLink::UniquePtr opboxLink;
+    rclcpp::Publisher<riptide_msgs2::msg::KillSwitchReport>::SharedPtr killButtonPublisher;
+    rclcpp::Service<SendOpboxNotification>::SharedPtr sendOpboxNotificationSrv;
 };
 
 

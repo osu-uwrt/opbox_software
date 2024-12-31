@@ -71,7 +71,7 @@ namespace opbox
 
     enum NotificationType
     {
-        NOTIFICATION_WARNING,
+        NOTIFICATION_WARNING = 0,
         NOTIFICATION_ERROR,
         NOTIFICATION_FATAL
     };

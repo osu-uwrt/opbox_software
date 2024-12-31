@@ -1,5 +1,6 @@
 #include "opbox_software/opboxlinux.hpp"
 #include "opbox_software/opboxlogging.hpp"
+#include "opbox_software/opboxio.hpp" //resolveAssetPath
 #include <libnotify/notify.h>
 #include <sys/wait.h>
 
@@ -66,6 +67,47 @@ namespace opbox
     }
 
 
+    void alert(
+        const NotificationType& type, 
+        const std::string& header,
+        const std::string& body,
+        const std::string& button1Text,
+        const std::string& button2Text,
+        const ProcessReturnHandler& returnHandler)
+    {
+        std::thread t(&alertThread, type, header, body, button1Text, button2Text, returnHandler);
+        t.detach();
+    }
+
+
+    void alertThread(
+        const NotificationType& type, 
+        const std::string& header,
+        const std::string& body,
+        const std::string& button1Text,
+        const std::string& button2Text,
+        const ProcessReturnHandler& returnHandler)
+    {
+        OPBOX_LOG_DEBUG("Creating alert with type %d, and header %s", type, header.c_str());
+        Subprocess sp(
+            opbox::resolveProgramPath("opbox_alert"),
+            {
+                "--notification-type", notificationTypeToString(type),
+                "--header", header,
+                "--body", body,
+                "--button1-text", button1Text,
+                "--button2-enabled", (button2Text.empty() ? "false" : "true"),
+                "--button2-text", button2Text
+            },
+            returnHandler
+        );
+
+        sp.run();
+        sp.wait();
+        OPBOX_LOG_DEBUG("Alert with type %d and header %s ended.", type, header.c_str());
+    }
+
+
     Subprocess::Subprocess(const std::string& program, const std::vector<std::string>& args, const ProcessReturnHandler& returnHandler)
      : handleProcessReturn(returnHandler),
        program(program),
@@ -100,7 +142,7 @@ namespace opbox
 
     bool Subprocess::running() const
     {
-        return thread->joinable();
+        return thread && thread->joinable();
     }
 
 
@@ -127,7 +169,7 @@ namespace opbox
 
     void Subprocess::threadFunc(void)
     {
-        OPBOX_LOG_DEBUG("Forking and starting program %s in another process", program.c_str());
+        OPBOX_LOG_DEBUG("Forking and starting program %s", program.c_str());
 
         pid = fork();
         if(pid == -1)
@@ -138,14 +180,22 @@ namespace opbox
         if(pid == 0)
         {
             //child process, assemble args into c style string array and start program
-            char *execArgs[(const size_t) args.size() + 1];
+            char *execArgs[(const size_t) args.size() + 2];
+            execArgs[0] = (char*) malloc(program.length());
+            strcpy(execArgs[0], program.c_str());
             for(int i = 0; i < args.size(); i++)
             {
-                execArgs[i] = (char*) malloc(args[i].length());
-                strcpy(execArgs[i], args[i].c_str());
+                execArgs[i + 1] = (char*) malloc(args[i].length());
+                strcpy(execArgs[i + 1], args[i].c_str());
             }
 
-            execArgs[args.size()] = (char*) 0;
+            execArgs[args.size() + 1] = (char*) 0;
+
+            OPBOX_LOG_DEBUG("Starting program %s via execv() with args listed below:", program.c_str());
+            for(size_t i = 0; i < args.size() + 2; i++)
+            {
+                OPBOX_LOG_DEBUG("Program %s, arg %d: %s", program.c_str(), i, execArgs[i]);
+            }
 
             int res = execv(program.c_str(), execArgs);
             if(res == -1)
