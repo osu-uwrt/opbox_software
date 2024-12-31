@@ -1,3 +1,6 @@
 [submodule "serial_library"]
 	path = serial_library
 	url = https://github.com/BTK203/serial_library
+[submodule "opbox_software/yaml-cpp"]
+	path = opbox_software/yaml-cpp
+	url = https://github.com/jbeder/yaml-cpp

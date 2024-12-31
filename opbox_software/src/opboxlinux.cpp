@@ -1,6 +1,6 @@
 #include "opbox_software/opboxlinux.hpp"
 #include "opbox_software/opboxlogging.hpp"
-#include "opbox_software/opboxio.hpp" //resolveAssetPath
+#include "opbox_software/opboxutil.hpp" //resolveAssetPath
 #include <libnotify/notify.h>
 #include <sys/wait.h>
 
@@ -90,7 +90,7 @@ namespace opbox
     {
         OPBOX_LOG_DEBUG("Creating alert with type %d, and header %s", type, header.c_str());
         Subprocess sp(
-            opbox::resolveProgramPath("opbox_alert"),
+            resolveAssetPath("lib://opbox_alert"),
             {
                 "--notification-type", notificationTypeToString(type),
                 "--header", header,

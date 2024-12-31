@@ -3,62 +3,6 @@
 namespace opbox {
 
     //
-    // Random utility function
-    //
-
-    std::string resolveInstallPath(const std::string& installPath)
-    {
-        char *prefixPath = getenv("AMENT_PREFIX_PATH");
-        if(!prefixPath)
-        {
-            OPBOX_LOG_ERROR("Env var AMENT_PREFIX_PATH not found!");
-            return installPath;
-        }
-
-        std::string prefixPathStr = prefixPath;
-
-        size_t previousPos = 0;
-        for(size_t pos = prefixPathStr.find(":", previousPos); 
-            pos != std::string::npos; 
-            pos = prefixPathStr.find(":", previousPos))
-        {
-            std::string path = prefixPathStr.substr(previousPos, pos - previousPos);
-            size_t rpos = path.rfind('/');
-            
-            OPBOX_LOG_DEBUG("Get install path checking path %s", path.c_str());
-            
-            if(rpos != std::string::npos)
-            {
-                std::string package = path.substr(rpos + 1);
-                OPBOX_LOG_DEBUG("Got package name for %s as %s", path.c_str(), package.c_str());
-                if(package == "opbox_software")
-                {
-                    std::string asset = path + "/" + installPath;
-                    OPBOX_LOG_DEBUG("Get install path as %s", asset.c_str());
-                    return asset;
-                }
-            }
-
-            previousPos = pos + 1;
-        }
-
-        OPBOX_LOG_ERROR("Unable to find install directory for opbox_software!");
-        return installPath;
-    }
-
-
-    std::string resolveAssetPath(const std::string& assetPath)
-    {
-        return resolveInstallPath("share/opbox_software/" + assetPath);
-    }
-
-
-    std::string resolveProgramPath(const std::string& programPath)
-    {
-        return resolveInstallPath("lib/opbox_software/" + programPath);
-    }
-
-    //
     // IOLed
     //
 

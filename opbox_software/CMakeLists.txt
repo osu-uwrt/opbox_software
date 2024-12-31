@@ -27,19 +27,13 @@ set(THREADS_PREFER_PTHREAD_FLAG ON)
 #
 # libnotify
 #
+
 pkg_check_modules(LIBNOTIFY REQUIRED libnotify)
 
 #
 # yaml-cpp
 #
-include(FetchContent)
-
-FetchContent_Declare(
-  yaml-cpp
-  GIT_REPOSITORY https://github.com/jbeder/yaml-cpp.git
-  GIT_TAG d45c4fba3eccb318441ceeccca67345b0dd21a80 # Can be a tag (yaml-cpp-x.x.x), a commit hash, or a branch name (master)
-)
-FetchContent_MakeAvailable(yaml-cpp)
+add_subdirectory(yaml-cpp)
 
 #
 # Compile src files for opbox lib
@@ -56,7 +50,8 @@ target_include_directories(opbox_lib PUBLIC
     $<INSTALL_INTERFACE:include>
     ${LIBNOTIFY_INCLUDE_DIRS})
 
-target_link_libraries(opbox_lib ${LIBNOTIFY_LIBRARIES})
+target_link_libraries(opbox_lib 
+    ${LIBNOTIFY_LIBRARIES})
 
 ament_target_dependencies(opbox_lib
     serial_library)
@@ -75,7 +70,7 @@ target_link_libraries(opbox_alert
 # opboxmain
 #
 
-add_executable(opbox_main src/main.cpp)
+add_executable(opbox_main src/main.cpp src/opboxsettings.cpp)
 target_link_libraries(opbox_main 
     PUBLIC opbox_lib yaml-cpp::yaml-cpp
     PRIVATE Threads::Threads)
@@ -132,13 +127,6 @@ install(DIRECTORY config
 # Compile test files
 #
 if(BUILD_TESTING)
-    # Copy test files to build dir for development testing
-    file(COPY test/test_files
-        DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
-    # Install test files to install dir for production testing
-    install(DIRECTORY test/test_files
-        DESTINATION ${PROJECT_NAME})
-
     file(GLOB test_src test/*.cpp)
 
     add_executable(opbox_test ${test_src})

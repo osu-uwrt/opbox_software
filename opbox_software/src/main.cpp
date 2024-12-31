@@ -4,6 +4,7 @@
 #include "opbox_software/opboxutil.hpp"
 #include "opbox_software/opboxcomms.hpp"
 #include "opbox_software/opboxlinux.hpp"
+#include "opbox_software/opboxsettings.hpp"
 
 #define KS_PIN 0
 #define KS_RED_LED 1

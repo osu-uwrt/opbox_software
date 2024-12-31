@@ -115,9 +115,11 @@ class OpboxRobotLinkTest : public ::testing::Test
 
 TEST_F(OpboxRobotLinkTest, TestRobotLinkConnected)
 {
-    ASSERT_TRUE(robotLink->connected());
-    ASSERT_TRUE(opboxLink->connected());
+    //object should default to not connected
+    ASSERT_FALSE(robotLink->connected());
+    ASSERT_FALSE(opboxLink->connected());
 
+    //after 600ms, links should have communicated and become connected
     std::this_thread::sleep_for(600ms);
 
     ASSERT_TRUE(robotLink->connected());
@@ -135,8 +137,8 @@ TEST_F(OpboxRobotLinkTest, TestRobotLinkConnected)
 
 TEST_F(OpboxRobotLinkTest, TestOpboxLinkConnected)
 {
-    ASSERT_TRUE(robotLink->connected());
-    ASSERT_TRUE(opboxLink->connected());
+    ASSERT_FALSE(robotLink->connected());
+    ASSERT_FALSE(opboxLink->connected());
 
     std::this_thread::sleep_for(600ms);
 

@@ -4,20 +4,23 @@
 
 TEST(TestOpboxIO, TestInFile)
 {
-    opbox::StringInFile inFile(opbox::resolveAssetPath("test_files/a.txt"));
+    opbox::StringInFile inFile(opbox::resolveAssetPath("share://test_files/a.txt"));
     ASSERT_TRUE(inFile.exists());
     ASSERT_EQ(inFile.read(), "A text");
 
-    opbox::StringInFile inFile2(opbox::resolveAssetPath("test_files/b.txt"));
+    opbox::StringInFile inFile2(opbox::resolveAssetPath("share://test_files/b.txt"));
     ASSERT_TRUE(inFile2.exists());
     ASSERT_EQ(inFile2.read(), "1");
 
-    opbox::StringInFile inFile3(opbox::resolveAssetPath("test_files/asdf"));
+    opbox::StringInFile inFile3(opbox::resolveAssetPath("share://test_files/asdf"));
     ASSERT_FALSE(inFile3.exists());
     ASSERT_EQ(inFile3.read(), "");
+
+    opbox::StringInFile inFile4(opbox::resolveAssetPath("lib://opbox_test"));
+    ASSERT_TRUE(inFile4.exists());
 }
 
-#define OUTFILE_TEST_FILE opbox::resolveAssetPath("test_files/c.txt")
+#define OUTFILE_TEST_FILE opbox::resolveAssetPath("share://test_files/c.txt")
 #define OUTFILE_TEST_DATA "hello!"
 
 
@@ -52,7 +55,7 @@ TEST(TestOpboxIO, TestOutFile)
 TEST(TestOpboxIO, TestGetAssetPath)
 {
     std::string 
-        asset = opbox::resolveAssetPath("test_files/some_text"),
+        asset = opbox::resolveAssetPath("share://test_files/some_text"),
         text = opbox::StringInFile(asset).read();
 
     ASSERT_EQ(text, "hello!");

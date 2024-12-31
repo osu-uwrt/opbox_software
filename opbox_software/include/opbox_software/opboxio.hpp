@@ -2,6 +2,7 @@
 
 #include "opboxbase.hpp"
 #include "opboxlogging.hpp"
+#include "opboxutil.hpp"
 #include <mutex>
 #include <chrono>
 #include <vector>
@@ -19,13 +20,6 @@
 using namespace std::chrono_literals;
 
 namespace opbox {
-    
-    //
-    // Random utility function
-    //
-    std::string resolveInstallPath(const std::string& installPath);
-    std::string resolveAssetPath(const std::string& assetPath);
-    std::string resolveProgramPath(const std::string& programPath);
 
     class NamedObject
     {
