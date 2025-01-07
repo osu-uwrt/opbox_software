@@ -12,8 +12,12 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 #
 # Misc. Requirements
 #
-find_package(ament_cmake REQUIRED)
-find_package(serial_library REQUIRED)
+find_package(ament_cmake)
+if(ament_cmake_FOUND)
+    find_package(serial_library REQUIRED)
+else()
+    add_subdirectory("../serial_library" serial_library)
+endif()
 find_package(Threads REQUIRED)
 find_package(PkgConfig REQUIRED)
 find_package(Qt5 REQUIRED COMPONENTS Widgets)
@@ -50,11 +54,22 @@ target_include_directories(opbox_lib PUBLIC
     $<INSTALL_INTERFACE:include>
     ${LIBNOTIFY_INCLUDE_DIRS})
 
-target_link_libraries(opbox_lib 
-    ${LIBNOTIFY_LIBRARIES})
+set(opbox_lib_libraries ${LIBNOTIFY_LIBRARIES} Threads::Threads)
 
-ament_target_dependencies(opbox_lib
-    serial_library)
+if(NOT ament_cmake_FOUND)
+    target_include_directories(opbox_lib PUBLIC
+        "../serial_library/include")
+    set(opbox_lib_libraries ${opbox_lib_libraries} serial_library)
+else()
+    target_compile_definitions(opbox_lib PUBLIC USE_AMENT_FILESYSTEM)
+endif()
+
+target_link_libraries(opbox_lib ${opbox_lib_libraries})
+
+if(ament_cmake_FOUND)
+    ament_target_dependencies(opbox_lib
+        serial_library)
+endif()
 
 target_compile_options(opbox_lib PRIVATE ${LIBNOTIFY_CFLAGS_OTHER})
 
@@ -72,8 +87,7 @@ target_link_libraries(opbox_alert
 
 add_executable(opbox_main src/main.cpp src/opboxsettings.cpp)
 target_link_libraries(opbox_main 
-    PUBLIC opbox_lib yaml-cpp::yaml-cpp
-    PRIVATE Threads::Threads)
+    PUBLIC opbox_lib yaml-cpp::yaml-cpp)
 
 #
 # testnotification
@@ -111,8 +125,10 @@ install(
 install(DIRECTORY include/
     DESTINATION include)
 
-ament_export_targets(opbox_libTargets HAS_LIBRARY_TARGET)
-ament_export_dependencies(serial_library)
+if(ament_cmake_FOUND)
+    ament_export_targets(opbox_libTargets HAS_LIBRARY_TARGET)
+    ament_export_dependencies(serial_library)
+endif()
 
 install(TARGETS opbox_alert opbox_main test_notification test_opboxalert test_opboxbrowser
     DESTINATION lib/${PROJECT_NAME})
@@ -151,4 +167,6 @@ file(COPY config
 install(DIRECTORY config
     DESTINATION ${PROJECT_NAME})
 
-ament_package()
+if(ament_cmake_FOUND)
+    ament_package()
+endif()

@@ -6,6 +6,11 @@ namespace opbox
 {
     std::string resolveInstallPath(const std::string& installPath)
     {
+        if(installPath.empty())
+        {
+            return "";
+        }
+
         char *prefixPath = getenv("AMENT_PREFIX_PATH");
         if(!prefixPath)
         {
@@ -44,18 +49,25 @@ namespace opbox
         return installPath;
     }
 
+    #if defined USE_AMENT_FILESYSTEM
+    #define SHARE_PATH "share/opbox_software"
+    #define LIB_PATH "lib/opbox_software"
+    #else
+    #define SHARE_PATH ""
+    #define LIB_PATH ""
+    #endif
 
     std::string resolveAssetPath(const std::string& assetPath)
     {
         std::string absPath = assetPath;
         if(assetPath.find("share://") == 0)
         {
-            absPath = resolveInstallPath("share/opbox_software/") + assetPath.substr(sizeof("share://") - 1);
+            absPath = resolveInstallPath(SHARE_PATH) + assetPath.substr(sizeof("share://") - 1);
         }
 
         if(assetPath.find("lib://") == 0)
         {
-            absPath = resolveInstallPath("lib/opbox_software/") + assetPath.substr(sizeof("lib://") - 1);
+            absPath = resolveInstallPath(LIB_PATH) + assetPath.substr(sizeof("lib://") - 1);
         }
 
         OPBOX_LOG_ERROR("Got asset %s as %s", assetPath.c_str(), absPath.c_str());
