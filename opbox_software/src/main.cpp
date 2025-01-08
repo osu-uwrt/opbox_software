@@ -13,7 +13,6 @@
 
 using namespace std::placeholders;
 
-typedef std::map<std::string, opbox::RobotLink::UniquePtr> SerialProcMap;
 void signalHandler(int signum);
 
 namespace opbox
@@ -27,39 +26,6 @@ namespace opbox
            _ksLeds(KS_GREEN_LED, KS_YELLOW_LED, KS_RED_LED),
            _killSwitch(KS_PIN, std::bind(&Opbox::killButtonStateChanged, this, _1))
         {
-            //initialize links to robots
-            for(std::string client : _settings.clients)
-            {
-                OPBOX_LOG_INFO("Connecting to %s on port %d", client.c_str(), _settings.clientPort);
-
-                _serialProcMap[client] = std::make_unique<opbox::RobotLink>(
-                    client,
-                    _settings.clientPort,
-
-                    [this, client] (
-                        const NotificationType& type,
-                        const std::string& sensor,
-                        const std::string& desc)
-                    {
-                        this->handleNotificationFromRobot(client, type, sensor, desc);
-                    },
-
-                    [this, client] (
-                        const KillSwitchState& robotKillState,
-                        const ThrusterState& thrusterState,
-                        const DiagnosticState& diagState,
-                        const LeakState& leakState)
-                    {
-                        this->handleStatusFromRobot(client, robotKillState, thrusterState, diagState, leakState);
-                    },
-
-                    [this, client] (const bool& connected)
-                    {
-                        this->handleRobotConnectionStateChange(client, connected);
-                    }
-                );
-            }
-
             //install signal handler
             signal(SIGINT, &signalHandler);
             sendSystemNotification(NotificationType::NOTIFICATION_WARNING, "Opbox System", "Opbox Software started.");
@@ -76,19 +42,54 @@ namespace opbox
             _usrLed.setNextState(IOLedState::IO_LED_OFF, 1s);
             _ksLeds.setAllStates(IOLedState::IO_LED_SLOW_BLINK);
             _ioMutex.unlock();
+            bool loopRunning = true;
+
+            OPBOX_LOG_DEBUG("Attempting to initialize robot link for client %s", _settings.client.c_str());
+            try
+            {
+                _robotLink = std::make_unique<opbox::RobotLink>(
+                    _settings.client,
+                    _settings.clientPort,
+
+                    [this] (
+                        const NotificationType& type,
+                        const std::string& sensor,
+                        const std::string& desc)
+                    {
+                        this->handleNotificationFromRobot(this->_settings.client, type, sensor, desc);
+                    },
+
+                    [this] (
+                        const KillSwitchState& robotKillState,
+                        const ThrusterState& thrusterState,
+                        const DiagnosticState& diagState,
+                        const LeakState& leakState)
+                    {
+                        this->handleStatusFromRobot(this->_settings.client, robotKillState, thrusterState, diagState, leakState);
+                    },
+
+                    [this] (const bool& connected)
+                    {
+                        this->handleRobotConnectionStateChange(this->_settings.client, connected);
+                    }
+                );
+            } catch(serial_library::FatalSerialLibraryException& ex)
+            {
+                OPBOX_LOG_ERROR("Failed to initialize robot link: %s", ex.what());
+            }
 
             OPBOX_LOG_INFO("Opbox initialized, loop starting");
             
-            bool loopRunning = true;
-            do
+            while(loopRunning)
             {
                 std::this_thread::sleep_for(250ms);
+                size_t focusedClientIdx = 0;
 
                 //update looprunning
                 _loopRunningMutex.lock();
                 loopRunning = _loopRunning;
                 _loopRunningMutex.unlock();
-            } while(loopRunning);
+            }
 
             OPBOX_LOG_INFO("Opbox loop ending");
             return 0;
@@ -144,34 +145,16 @@ namespace opbox
         }
 
 
-        std::string getPrimaryRobot(void)
-        {
-            _commMutex.lock();
-            if(_primaryRobot.empty())
-            {
-                for(auto it = _serialProcMap.begin(); it != _serialProcMap.end(); it++)
-                {
-                    if(_serialProcMap.at(it->first)->connected())
-                    {
-                        _primaryRobot = it->first;
-                        sendSystemNotification(NOTIFICATION_WARNING, "Primary Robot Changed", "Primary Robot changed to " + _primaryRobot);
-                    }
-                }
-            }
-            
-            _commMutex.unlock();
-            return _primaryRobot;
-        }
-
-
         void killButtonStateChanged(const int& newKillButtonState)
         {
             OPBOX_LOG_INFO("Kill button state changed to %d", newKillButtonState);
             ioActuatorAlert(NOTIFICATION_WARNING);
             
-            std::string robot = getPrimaryRobot(); //needs to be its own line because mutexes
             _commMutex.lock();
-            _serialProcMap.at(robot)->sendKillButtonState((KillSwitchState) newKillButtonState);
+            if(_robotLink)
+            {
+                _robotLink->sendKillButtonState((KillSwitchState) newKillButtonState);
+            }
             _commMutex.unlock();
         }
 
@@ -265,7 +248,7 @@ namespace opbox
 
         //communication
         std::mutex _commMutex;
-        SerialProcMap _serialProcMap;
+        RobotLink::UniquePtr _robotLink;
         std::string _primaryRobot;
     };
 }

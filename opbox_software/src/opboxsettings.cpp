@@ -106,13 +106,10 @@ namespace opbox
             yaml = YAML::LoadFile(path)["opbox_config"],
             node;
         
-        results.push_back(getNodeFromYaml(yaml, "clients", YAML::NodeType::value::Sequence, node));
+        results.push_back(getNodeFromYaml(yaml, "client", YAML::NodeType::value::Scalar, node));
         if(results.back())
         {
-            for(auto it = node.begin(); it != node.end(); it++)
-            {
-                settings.clients.push_back(it->as<std::string>());
-            }
+            settings.client = node.as<std::string>();
         }
 
         results.push_back(getNodeFromYaml(yaml, "client_port", YAML::NodeType::value::Scalar, node));

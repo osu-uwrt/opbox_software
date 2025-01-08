@@ -43,6 +43,7 @@ namespace opbox
        bumpFrameId(bumpFrameId),
        debugName(debugName)
     {
+        OPBOX_LOG_DEBUG("%s constructing serial processor", debugName.c_str());
         serialProc = std::make_unique<serial_library::SerialProcessor>(
             std::move(transceiver),
             OPBOX_FRAMES,
@@ -51,6 +52,8 @@ namespace opbox
             sizeof(OPBOX_SYNC),
             getCallbacks(),
             debugName);
+
+        OPBOX_LOG_DEBUG("%s serial processor constructed, continuing initialization", debugName.c_str());
         
         auto now = std::chrono::system_clock::now();
 
@@ -284,7 +287,7 @@ namespace opbox
             return std::make_unique<serial_library::LinuxDualUDPTransceiver>(address, port, port + 1, 0.1, true);
         }
 
-        return std::make_unique<serial_library::LinuxUDPTransceiver>(address, port, 0.1, true);
+        return std::make_unique<serial_library::LinuxUDPTransceiver>(address, port, 0.1);
     }
 
 
@@ -326,6 +329,6 @@ namespace opbox
             return std::make_unique<serial_library::LinuxDualUDPTransceiver>(address, port + 1, port, 0.1, true);
         }
 
-        return std::make_unique<serial_library::LinuxUDPTransceiver>(address, port, 0.1, true);
+        return std::make_unique<serial_library::LinuxUDPTransceiver>(address, port, 0.1);
     }
 }

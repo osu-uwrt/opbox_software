@@ -1,12 +1,7 @@
 opbox_config:
   # clients, in priority order. Will connect on port specified by client_port
-  clients:
-    # - orin
-    # - lilboat
-    # - localhost
-    - "192.168.0.61"
-  
-  client_port: 9444
+  client: brach-laptop
+  client_port: 10510
   
   # diagnostics server settings
   diag_server_port: 5000

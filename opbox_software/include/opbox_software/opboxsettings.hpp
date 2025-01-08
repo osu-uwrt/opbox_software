@@ -1,7 +1,6 @@
 #pragma once
 
 #include "opbox_software/opboxbase.hpp"
-#include <list>
 
 namespace opbox
 {
@@ -15,7 +14,7 @@ namespace opbox
 
     struct OpboxSettings
     {
-        std::list<std::string> clients;
+        std::string client;
         int
             clientPort = 0,
             diagServerPort = 0;
