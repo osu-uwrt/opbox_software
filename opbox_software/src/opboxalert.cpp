@@ -9,6 +9,7 @@
 #include <QShortcut>
 #include <QStyle>
 #include <QPixmap>
+#include <QTimer>
 #include <iostream>
 #include <iomanip>
 #include "opbox_software/opboxcomms.hpp"
@@ -20,7 +21,9 @@ enum ArgumentType
     ALERT_ARG_BODY,
     ALERT_ARG_BUTTON2_ENABLED,
     ALERT_ARG_BUTTON1_TEXT,
-    ALERT_ARG_BUTTON2_TEXT
+    ALERT_ARG_BUTTON2_TEXT,
+    ALERT_ARG_TIMEOUT,
+    ALERT_ARG_DEFAULT_EXIT_CODE
 };
 
 typedef std::map<ArgumentType, std::string> ArgMap;
@@ -32,7 +35,9 @@ const InverseArgMap ARG_FLAGS = {
     { "--body", ALERT_ARG_BODY },
     { "--button2-enabled", ALERT_ARG_BUTTON2_ENABLED },
     { "--button1-text", ALERT_ARG_BUTTON1_TEXT },
-    { "--button2-text", ALERT_ARG_BUTTON2_TEXT }
+    { "--button2-text", ALERT_ARG_BUTTON2_TEXT },
+    { "--timeout", ALERT_ARG_TIMEOUT },
+    { "--default-exit-code", ALERT_ARG_DEFAULT_EXIT_CODE }
 };
 
 const ArgMap ARG_DESCRIPTIONS = {
@@ -41,7 +46,9 @@ const ArgMap ARG_DESCRIPTIONS = {
     { ALERT_ARG_BODY, "Shown on the smaller label underneath the header" },
     { ALERT_ARG_BUTTON2_ENABLED, "If \"true\", button 2 will be enabled. Button will not render otherwise" },
     { ALERT_ARG_BUTTON1_TEXT, "Shown on button 1" },
-    { ALERT_ARG_BUTTON2_TEXT, "Shown on button 2" }
+    { ALERT_ARG_BUTTON2_TEXT, "Shown on button 2" },
+    { ALERT_ARG_TIMEOUT, "Number of seconds window should last before closing itself" },
+    { ALERT_ARG_DEFAULT_EXIT_CODE, "Exit code returned by window if it closes itself" }
 };
 
 const ArgMap DEFAULT_ARGS = {
@@ -50,7 +57,9 @@ const ArgMap DEFAULT_ARGS = {
     { ALERT_ARG_BODY, "Alert" },
     { ALERT_ARG_BUTTON2_ENABLED, "false" },
     { ALERT_ARG_BUTTON1_TEXT, "OK" },
-    { ALERT_ARG_BUTTON2_TEXT, "Cancel" }
+    { ALERT_ARG_BUTTON2_TEXT, "Cancel" },
+    { ALERT_ARG_TIMEOUT, "600" },
+    { ALERT_ARG_DEFAULT_EXIT_CODE, "0" }
 };
 
 const std::map<opbox::NotificationType, std::string> FRIENDLY_NOTIFICATION_TYPE_NAMES = {
@@ -201,6 +210,15 @@ int alertWindow(int argc, char **argv, const ArgMap& params)
     // Show the window
     window.resize(400, 300);
     window.show();
+
+    // set timer for auto close
+    int
+        autoCloseSeconds = std::stoi(params.at(ALERT_ARG_TIMEOUT)),
+        autoCloseCode = std::stoi(params.at(ALERT_ARG_DEFAULT_EXIT_CODE));
+
+    QTimer::singleShot(autoCloseSeconds * 1000, [&]() {
+        app.quit();
+    });
 
     // Execute the application
     app.exec();

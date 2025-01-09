@@ -219,7 +219,7 @@ namespace opbox
 
                 //start new browswer process
                 std::string url = "http://" + browserHost + ":" + std::to_string(_settings.diagServerPort);
-                std::vector<std::string> args = { url, "--kiosk" }; //"kiosk" starts fullscreen
+                std::vector<std::string> args = { url, }; //"kiosk" starts fullscreen
                 OPBOX_LOG_DEBUG("Starting browser with url %s", url.c_str());
 
                 _browserProcess = std::make_unique<Subprocess>(

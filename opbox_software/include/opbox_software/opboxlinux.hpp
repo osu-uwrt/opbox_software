@@ -50,7 +50,7 @@ namespace opbox
         void run();
         void wait();
         bool running() const;
-        void kill();
+        void kill(const std::chrono::milliseconds& timeout = 2500ms);
         int returnCode() const;
 
         private:

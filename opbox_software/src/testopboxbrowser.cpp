@@ -8,6 +8,7 @@ int main(int argc, char **argv)
     std::this_thread::sleep_for(5s);
     OPBOX_LOG_INFO("Killing process");
     sp.kill();
+    sp.wait();
     OPBOX_LOG_INFO("Browser process ended with code %d", sp.returnCode());
     return 0;
 }

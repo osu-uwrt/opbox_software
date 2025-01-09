@@ -146,13 +146,39 @@ namespace opbox
     }
 
 
-    void Subprocess::kill()
+    void Subprocess::kill(const std::chrono::milliseconds& timeout)
     {
-        OPBOX_LOG_DEBUG("Killing program %s with SIGINT", program.c_str());
+        OPBOX_LOG_DEBUG("Killing program %s", program.c_str());
         if(pid > 0)
         {
-            ::kill(pid, SIGINT);
+            for(int signal : {SIGINT, SIGTERM, SIGKILL})
+            {
+                OPBOX_LOG_DEBUG("Trying to kill program %s with signal %d", program.c_str(), signal);
+                auto startTime = std::chrono::system_clock::now();
+                while(::kill(pid, 0) == 0 && std::chrono::system_clock::now() - startTime < timeout)
+                {
+                    if(::kill(pid, signal) < 0)
+                    {
+                        OPBOX_LOG_ERROR("Failed to kill program %s : %s", program.c_str(), strerror(errno));
+                    }
+
+                    std::this_thread::sleep_for(50ms);
+                }
+
+                if(::kill(pid, 0) != 0)
+                {
+                    //process still alive which is good
+                    OPBOX_LOG_DEBUG("Program %s killed.", program.c_str());
+                    break;
+                }
+            }
+            
+            if(::kill(pid, 0) == 0)
+            {
+                OPBOX_LOG_ERROR("Failed to kill program %s, it just wouldn't die.", program.c_str());
+            }
         }
+        
     }
 
 
@@ -191,6 +217,18 @@ namespace opbox
 
             execArgs[args.size() + 1] = (char*) 0;
 
+            char *useruid = getenv("SUDO_UID");
+            if(useruid)
+            {
+                OPBOX_LOG_DEBUG("Setting uid of process %s to %s", program.c_str(), useruid);
+                uid_t uid = (uid_t) atoi(useruid);
+
+                if(uid && setuid(uid) != 0)
+                {
+                    OPBOX_LOG_ERROR("Unable to set uid of program %s: %s", program.c_str(), strerror(errno));
+                }
+            }
+
             OPBOX_LOG_DEBUG("Starting program %s via execv() with args listed below:", program.c_str());
             for(size_t i = 0; i < args.size() + 2; i++)
             {
@@ -213,18 +251,25 @@ namespace opbox
         {
             //parent process
             int status = 0;
-            waitpid(pid, &status, 0); //wait for program to stop
 
-            //handle return
-            if(WIFEXITED(status))
+            do
             {
-                retcode = WEXITSTATUS(status);
-                handleProcessReturn(retcode);
-            } else
-            {
-                //uh oh
-                OPBOX_LOG_ERROR("waitpid() returned but program %s has not exited", program.c_str());
-            }
+                waitpid(pid, &status, 0); //wait for program to stop
+
+            } while(!WIFEXITED(status));
+            
+            retcode = WEXITSTATUS(status);
+            handleProcessReturn(retcode);
+
+            // //handle return
+            // if()
+            // {
+                
+            // } else
+            // {
+            //     //uh oh
+            //     OPBOX_LOG_ERROR("waitpid() returned but program %s has not exited", program.c_str());
+            // }
         }
     }
 
