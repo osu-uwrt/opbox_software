@@ -158,7 +158,7 @@ int alertWindow(int argc, char **argv, const ArgMap& params)
     // Add a horizontal layout for buttons
     QHBoxLayout *buttonLayout = new QHBoxLayout();
 
-    int retCode = 0;
+    int retCode = std::stoi(params.at(ALERT_ARG_DEFAULT_EXIT_CODE));
 
     // Create two buttons
     QPushButton 

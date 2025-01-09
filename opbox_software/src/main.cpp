@@ -124,7 +124,8 @@ namespace opbox
                     break;
                 case NOTIFICATION_ERROR:
                     //buzzer notification
-                    _buzzer.setState(IOBuzzerState::IO_BUZZER_CHIRP_TWICE);
+                    _buzzer.setState(IOBuzzerState::IO_BUZZER_LONG_CHIRP);
+                    _buzzer.setNextState(IOBuzzerState::IO_BUZZER_CHIRP_TWICE, 625ms);
                     _buzzer.setNextState(IOBuzzerState::IO_BUZZER_OFF, 500ms);
 
                     //user led
@@ -201,16 +202,12 @@ namespace opbox
                 NotificationType::NOTIFICATION_WARNING,
                 robot + " " + verb,
                 desc);
+            
+            alert(NotificationType::NOTIFICATION_WARNING, "Robot connection", desc, "OK");
+            ioActuatorAlert(NotificationType::NOTIFICATION_WARNING);
 
-            if(connected)
+            if(connected && (!_browserProcess || !_browserProcess->running()))
             {
-                //stop browser process if it is running
-                if(_browserProcess && _browserProcess->running())
-                {
-                    _browserProcess->kill();
-                    _browserProcess->wait();
-                }
-
                 std::string browserHost = _settings.customDiagServerIp;
                 if(!_settings.useCustomDiagServerIp)
                 {
@@ -219,7 +216,7 @@ namespace opbox
 
                 //start new browswer process
                 std::string url = "http://" + browserHost + ":" + std::to_string(_settings.diagServerPort);
-                std::vector<std::string> args = { url, }; //"kiosk" starts fullscreen
+                std::vector<std::string> args = { url, }; // can add "kiosk" to make process fullscreen and not exitable
                 OPBOX_LOG_DEBUG("Starting browser with url %s", url.c_str());
 
                 _browserProcess = std::make_unique<Subprocess>(

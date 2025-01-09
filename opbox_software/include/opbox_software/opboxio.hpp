@@ -584,6 +584,7 @@ namespace opbox {
     {
         IO_BUZZER_OFF,
         IO_BUZZER_CHIRP,
+        IO_BUZZER_LONG_CHIRP,
         IO_BUZZER_CHIRP_TWICE,
         IO_BUZZER_PANIC
     };

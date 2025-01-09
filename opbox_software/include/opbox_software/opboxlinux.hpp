@@ -25,6 +25,8 @@ namespace opbox
         const std::string& body,
         const std::string& button1Text,
         const std::string& button2Text = "",
+        int timeoutSeconds = 3600,
+        int defaultReturnCode = 0,
         const ProcessReturnHandler& returnHandler = &genericReturnCodeHandler);
     
     void alertThread(
@@ -33,6 +35,8 @@ namespace opbox
         const std::string& body,
         const std::string& button1Text,
         const std::string& button2Text,
+        int timeoutSeconds,
+        int defaultReturnCode,
         const ProcessReturnHandler& returnHandler);
 
     class Subprocess

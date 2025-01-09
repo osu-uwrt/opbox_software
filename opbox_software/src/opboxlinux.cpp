@@ -73,9 +73,11 @@ namespace opbox
         const std::string& body,
         const std::string& button1Text,
         const std::string& button2Text,
+        int timeoutSeconds,
+        int defaultReturnCode,
         const ProcessReturnHandler& returnHandler)
     {
-        std::thread t(&alertThread, type, header, body, button1Text, button2Text, returnHandler);
+        std::thread t(&alertThread, type, header, body, button1Text, button2Text, timeoutSeconds, defaultReturnCode, returnHandler);
         t.detach();
     }
 
@@ -86,6 +88,8 @@ namespace opbox
         const std::string& body,
         const std::string& button1Text,
         const std::string& button2Text,
+        int timeoutSeconds,
+        int defaultReturnCode,
         const ProcessReturnHandler& returnHandler)
     {
         OPBOX_LOG_DEBUG("Creating alert with type %d, and header %s", type, header.c_str());
@@ -97,7 +101,9 @@ namespace opbox
                 "--body", body,
                 "--button1-text", button1Text,
                 "--button2-enabled", (button2Text.empty() ? "false" : "true"),
-                "--button2-text", button2Text
+                "--button2-text", button2Text,
+                "--default-exit-code", std::to_string(defaultReturnCode),
+                "--timeout", std::to_string(timeoutSeconds)
             },
             returnHandler
         );
@@ -157,7 +163,7 @@ namespace opbox
                 auto startTime = std::chrono::system_clock::now();
                 while(::kill(pid, 0) == 0 && std::chrono::system_clock::now() - startTime < timeout)
                 {
-                    if(::kill(pid, signal) < 0)
+                    if(::kill(-pid, signal) < 0)
                     {
                         OPBOX_LOG_ERROR("Failed to kill program %s : %s", program.c_str(), strerror(errno));
                     }
@@ -251,14 +257,29 @@ namespace opbox
         {
             //parent process
             int status = 0;
+            bool exited = false;
 
-            do
+            OPBOX_LOG_DEBUG("Successfully started process as pid %d", pid);
+
+            while(!exited)
             {
-                waitpid(pid, &status, 0); //wait for program to stop
+                if(waitpid(pid, &status, 0) < 1) //wait for program to stop
+                {
+                    OPBOX_LOG_ERROR("waitpid() failed: %s", strerror(errno));
+                    break;
+                }
 
-            } while(!WIFEXITED(status));
-            
-            retcode = WEXITSTATUS(status);
+                exited = WIFSIGNALED(status) || WIFEXITED(status);
+                OPBOX_LOG_DEBUG("Program %s state changed, status %d, exited: %s", program.c_str(), status, exited ? "yes" : "no");
+            }
+
+            retcode = 0;
+            if(WIFEXITED(status))
+            {
+                retcode = WEXITSTATUS(status);
+            }
+
+            OPBOX_LOG_DEBUG("Program %s exited with code %d, running return function", program.c_str(), retcode);
             handleProcessReturn(retcode);
 
             // //handle return

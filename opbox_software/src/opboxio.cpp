@@ -73,6 +73,12 @@ namespace opbox {
         {
             case IO_BUZZER_OFF:
                 break;
+            case IO_BUZZER_LONG_CHIRP:
+                patt = {
+                    {1, 500ms},
+                    {0, 24h}
+                };
+                break;
             case IO_BUZZER_CHIRP:
                 patt = {
                     {1, 125ms},
