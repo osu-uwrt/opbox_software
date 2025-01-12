@@ -2,3 +2,16 @@
   ros__parameters:
     opbox_address: "opbox-ts"
     opbox_port: 10510
+
+    danger_states:
+      dangerstate0:
+        diagnostic_name: something
+        diagnostic_status: 2
+        minimum_num_msgs: 8
+        opbox_status: 0
+      dangerstate1:
+        diagnostic_name: "firmware_monitor: Smart Battery Housing Port"
+        diagnostic_status: 2
+        minimum_num_msgs: 5
+        opbox_status: 0
+      
