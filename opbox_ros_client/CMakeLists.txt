@@ -8,12 +8,14 @@ endif()
 # find dependencies
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
+find_package(diagnostic_msgs REQUIRED)
 find_package(opbox_software REQUIRED)
 find_package(serial_library REQUIRED)
 find_package(riptide_msgs2 REQUIRED)
 
 set(deps
   rclcpp
+  diagnostic_msgs
   opbox_software
   riptide_msgs2)
 

@@ -13,6 +13,7 @@
   <test_depend>ament_lint_common</test_depend>
 
   <depend>rclcpp</depend>
+  <depend>diagnostic_msgs</depend>
   <depend>opbox_software</depend>
   <depend>serial_library</depend>
   <depend>riptide_msgs2</depend>
