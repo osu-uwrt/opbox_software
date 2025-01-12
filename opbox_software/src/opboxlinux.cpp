@@ -73,11 +73,10 @@ namespace opbox
         const std::string& body,
         const std::string& button1Text,
         const std::string& button2Text,
-        int timeoutSeconds,
-        int defaultReturnCode,
-        const ProcessReturnHandler& returnHandler)
+        const ProcessReturnHandler& returnHandler,
+        int defaultReturnCode)
     {
-        std::thread t(&alertThread, type, header, body, button1Text, button2Text, timeoutSeconds, defaultReturnCode, returnHandler);
+        std::thread t(&alertThread, type, header, body, button1Text, button2Text, returnHandler, defaultReturnCode);
         t.detach();
     }
 
@@ -88,11 +87,15 @@ namespace opbox
         const std::string& body,
         const std::string& button1Text,
         const std::string& button2Text,
-        int timeoutSeconds,
-        int defaultReturnCode,
-        const ProcessReturnHandler& returnHandler)
+        const ProcessReturnHandler& returnHandler,
+        int defaultReturnCode)
     {
         OPBOX_LOG_DEBUG("Creating alert with type %d, and header %s", type, header.c_str());
+        
+        int timeout = (type == NOTIFICATION_WARNING ? 10 :
+                       type == NOTIFICATION_ERROR ? 30 :
+                       type == NOTIFICATION_FATAL ? 3600 : 3600);
+
         Subprocess sp(
             resolveAssetPath("lib://opbox_alert"),
             {
@@ -103,7 +106,7 @@ namespace opbox
                 "--button2-enabled", (button2Text.empty() ? "false" : "true"),
                 "--button2-text", button2Text,
                 "--default-exit-code", std::to_string(defaultReturnCode),
-                "--timeout", std::to_string(timeoutSeconds)
+                "--timeout", std::to_string(timeout)
             },
             returnHandler
         );

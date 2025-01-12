@@ -13,6 +13,9 @@
 
 using namespace std::placeholders;
 
+template<typename T>
+using ProtectedResource = serial_library::ProtectedResource<T>;
+
 void signalHandler(int signum);
 
 namespace opbox
@@ -23,8 +26,11 @@ namespace opbox
         Opbox()
          : _loopRunning(true),
            _settings(readOpboxSettings()),
-           _ksLeds(KS_GREEN_LED, KS_YELLOW_LED, KS_RED_LED),
-           _killSwitch(KS_PIN, std::bind(&Opbox::killButtonStateChanged, this, _1))
+           _buzzerResource(std::make_unique<IOBuzzer>()),
+           _usrLedResource(std::make_unique<IOUsrLed>()),
+           _ksLedsResource(std::make_unique<KillSwitchLeds>(KS_GREEN_LED, KS_YELLOW_LED, KS_RED_LED)),
+           _killSwitchResource(std::make_unique<IOGpioSensor<int>>(KS_PIN, std::bind(&Opbox::killButtonStateChanged, this, _1))),
+           _robotLinkResource(std::unique_ptr<RobotLink>())
         {
             //install signal handler
             signal(SIGINT, &signalHandler);
@@ -35,19 +41,27 @@ namespace opbox
         int loop()
         {
             //use ios to indicate program coming up
-            _ioMutex.lock();
-            _buzzer.setState(IOBuzzerState::IO_BUZZER_CHIRP_TWICE);
-            _buzzer.setNextState(IOBuzzerState::IO_BUZZER_OFF, 1s);
-            _usrLed.setState(IOLedState::IO_LED_BLINK_TWICE);
-            _usrLed.setNextState(IOLedState::IO_LED_OFF, 1s);
-            _ksLeds.setAllStates(IOLedState::IO_LED_SLOW_BLINK);
-            _ioMutex.unlock();
+            std::unique_ptr<IOBuzzer> buzzer = _buzzerResource.lockResource();
+            buzzer->setState(IOBuzzerState::IO_BUZZER_CHIRP_TWICE);
+            buzzer->setNextState(IOBuzzerState::IO_BUZZER_OFF, 1s);
+            _buzzerResource.unlockResource(std::move(buzzer));
+
+            std::unique_ptr<IOUsrLed> usrLed = _usrLedResource.lockResource();
+            usrLed->setState(IOLedState::IO_LED_BLINK_TWICE);
+            usrLed->setNextState(IOLedState::IO_LED_OFF, 1s);
+            _usrLedResource.unlockResource(std::move(usrLed));
+
+            std::unique_ptr<KillSwitchLeds> ksLeds = _ksLedsResource.lockResource();
+            ksLeds->setAllStates(IOLedState::IO_LED_SLOW_BLINK);
+            _ksLedsResource.unlockResource(std::move(ksLeds));
+
             bool loopRunning = true;
 
             OPBOX_LOG_DEBUG("Attempting to initialize robot link for client %s", _settings.client.c_str());
             try
             {
-                _robotLink = std::make_unique<opbox::RobotLink>(
+                std::unique_ptr<RobotLink> robotLink = _robotLinkResource.lockResource();
+                robotLink = std::make_unique<opbox::RobotLink>(
                     _settings.client,
                     _settings.clientPort,
 
@@ -73,6 +87,8 @@ namespace opbox
                         this->handleRobotConnectionStateChange(this->_settings.client, connected);
                     }
                 );
+
+                _robotLinkResource.unlockResource(std::move(robotLink));
             } catch(serial_library::FatalSerialLibraryException& ex)
             {
                 OPBOX_LOG_ERROR("Failed to initialize robot link: %s", ex.what());
@@ -108,41 +124,43 @@ namespace opbox
 
         void ioActuatorAlert(const NotificationType& type)
         {
-            _ioMutex.lock();
-
+            std::unique_ptr<IOBuzzer> buzzer = _buzzerResource.lockResource();
+            std::unique_ptr<IOUsrLed> usrLed = _usrLedResource.lockResource();
+            
             //actuate IOs based on notification type
             switch(type)
             {
                 case NOTIFICATION_WARNING:
                     //buzzer notification
-                    _buzzer.setState(IOBuzzerState::IO_BUZZER_CHIRP);
-                    _buzzer.setNextState(IOBuzzerState::IO_BUZZER_OFF, 500ms);
+                    buzzer->setState(IOBuzzerState::IO_BUZZER_CHIRP);
+                    buzzer->setNextState(IOBuzzerState::IO_BUZZER_OFF, 500ms);
 
                     //user led
-                    _usrLed.setState(IOLedState::IO_LED_BLINK_ONCE);
-                    _usrLed.setNextState(IOLedState::IO_LED_OFF, 500ms);
+                    usrLed->setState(IOLedState::IO_LED_BLINK_ONCE);
+                    usrLed->setNextState(IOLedState::IO_LED_OFF, 500ms);
                     break;
                 case NOTIFICATION_ERROR:
                     //buzzer notification
-                    _buzzer.setState(IOBuzzerState::IO_BUZZER_LONG_CHIRP);
-                    _buzzer.setNextState(IOBuzzerState::IO_BUZZER_CHIRP_TWICE, 625ms);
-                    _buzzer.setNextState(IOBuzzerState::IO_BUZZER_OFF, 500ms);
+                    buzzer->setState(IOBuzzerState::IO_BUZZER_LONG_CHIRP);
+                    buzzer->setNextState(IOBuzzerState::IO_BUZZER_CHIRP_TWICE, 625ms);
+                    buzzer->setNextState(IOBuzzerState::IO_BUZZER_OFF, 500ms);
 
                     //user led
-                    _usrLed.setState(IOLedState::IO_LED_BLINK_TWICE);
-                    _usrLed.setNextState(IOLedState::IO_LED_SLOW_BLINK, 500ms);
+                    usrLed->setState(IOLedState::IO_LED_BLINK_TWICE);
+                    usrLed->setNextState(IOLedState::IO_LED_SLOW_BLINK, 500ms);
                     break;
                 case NOTIFICATION_FATAL:
                     //buzzer notification
-                    _buzzer.setState(IOBuzzerState::IO_BUZZER_PANIC);
-                    _buzzer.setNextState(IOBuzzerState::IO_BUZZER_OFF, 4s);
+                    buzzer->setState(IOBuzzerState::IO_BUZZER_PANIC);
+                    buzzer->setNextState(IOBuzzerState::IO_BUZZER_OFF, 4s);
 
                     //user led
-                    _usrLed.setState(IOLedState::IO_LED_FAST_BLINK);
+                    usrLed->setState(IOLedState::IO_LED_FAST_BLINK);
                     break;
             }
 
-            _ioMutex.unlock();
+            _buzzerResource.unlockResource(std::move(buzzer));
+            _usrLedResource.unlockResource(std::move(usrLed));
         }
 
 
@@ -151,12 +169,13 @@ namespace opbox
             OPBOX_LOG_INFO("Kill button state changed to %d", newKillButtonState);
             ioActuatorAlert(NOTIFICATION_WARNING);
             
-            _commMutex.lock();
-            if(_robotLink)
+            std::unique_ptr<RobotLink> robotLink = _robotLinkResource.lockResource();
+            if(robotLink)
             {
-                _robotLink->sendKillButtonState((KillSwitchState) newKillButtonState);
+                robotLink->sendKillButtonState((KillSwitchState) newKillButtonState);
             }
-            _commMutex.unlock();
+            
+            _robotLinkResource.unlockResource(std::move(robotLink));
         }
 
 
@@ -226,6 +245,19 @@ namespace opbox
             }
         }
 
+
+        void resetBuzzerAndUsrLed(void)
+        {
+            std::unique_ptr<IOBuzzer> buzzer = _buzzerResource.lockResource();
+            std::unique_ptr<IOUsrLed> led = _usrLedResource.lockResource();
+
+            buzzer->setState(IOBuzzerState::IO_BUZZER_OFF);
+            led->setState(IOLedState::IO_LED_OFF);
+            
+            _buzzerResource.unlockResource(std::move(buzzer));
+            _usrLedResource.unlockResource(std::move(led));
+        }
+
         //loop
         std::mutex _loopRunningMutex;
         bool _loopRunning = true;
@@ -237,16 +269,13 @@ namespace opbox
         std::unique_ptr<Subprocess> _browserProcess;
 
         //IO
-        std::mutex _ioMutex;
-        IOBuzzer _buzzer;
-        IOUsrLed _usrLed;
-        KillSwitchLeds _ksLeds;
-        IOGpioSensor<int> _killSwitch;
+        ProtectedResource<IOBuzzer> _buzzerResource;
+        ProtectedResource<IOUsrLed> _usrLedResource;
+        ProtectedResource<KillSwitchLeds> _ksLedsResource;
+        ProtectedResource<IOGpioSensor<int>> _killSwitchResource;
 
         //communication
-        std::mutex _commMutex;
-        RobotLink::UniquePtr _robotLink;
-        std::string _primaryRobot;
+        ProtectedResource<RobotLink> _robotLinkResource;
     };
 }
 
