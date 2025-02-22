@@ -151,10 +151,12 @@ namespace opbox
                     (LeakState) serialProc->getFieldValue<uint8_t>(LEAK_STATE)
                 );
 
-                uid_t remotesNextNotUid = serialProc->getFieldValue<uid_t>(NOTIFICATION_UID);
-                if(remotesNextNotUid > nextNotificationUid)
                 {
-                    nextNotificationUid = remotesNextNotUid;
+                    uid_t remotesNextNotUid = serialProc->getFieldValue<uid_t>(NOTIFICATION_UID);
+                    if(remotesNextNotUid > nextNotificationUid)
+                    {
+                        nextNotificationUid = remotesNextNotUid;
+                    }
                 }
 
                 break;
@@ -165,6 +167,14 @@ namespace opbox
                 handleKillButton(
                     (KillSwitchState) serialProc->getFieldValue<uint8_t>(KILL_BUTTON_STATE)
                 );
+
+                {
+                    uid_t remotesNextNotUid = serialProc->getFieldValue<uid_t>(NOTIFICATION_UID);
+                    if(remotesNextNotUid > nextNotificationUid)
+                    {
+                        nextNotificationUid = remotesNextNotUid;
+                    }
+                }
 
                 break;
             case NOTIFICATION_FRAME:
