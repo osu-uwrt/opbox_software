@@ -41,7 +41,8 @@ namespace opbox
        handleConnectionStateChange(conStateHandler),
        threadRunning(true),
        bumpFrameId(bumpFrameId),
-       debugName(debugName)
+       debugName(debugName),
+       nextNotificationUid(0)
     {
         OPBOX_LOG_DEBUG("%s constructing serial processor", debugName.c_str());
         serialProc = std::make_unique<serial_library::SerialProcessor>(
@@ -78,7 +79,6 @@ namespace opbox
     }
 
 
-    NotificationUid OpboxRobotLink::nextNotificationUid = 0;
     NotificationUid OpboxRobotLink::getNextNotificationUid()
     {
         return nextNotificationUid++;
@@ -150,6 +150,12 @@ namespace opbox
                     (DiagnosticState) serialProc->getFieldValue<uint8_t>(DIAGNOSTICS_STATE),
                     (LeakState) serialProc->getFieldValue<uint8_t>(LEAK_STATE)
                 );
+
+                uid_t remotesNextNotUid = serialProc->getFieldValue<uid_t>(NOTIFICATION_UID);
+                if(remotesNextNotUid > nextNotificationUid)
+                {
+                    nextNotificationUid = remotesNextNotUid;
+                }
 
                 break;
             
@@ -274,6 +280,7 @@ namespace opbox
         OPBOX_LOG_DEBUG("Sending opbox state with kill button state %d", state);
         auto now = std::chrono::system_clock::now();
         serialProc->setFieldValue<uint8_t>(KILL_BUTTON_STATE, state, now);
+        serialProc->setFieldValue<uint8_t>(NEXT_NOTIFICATION_UID, nextNotificationUid, now);
         serialProc->send(OPBOX_STATUS_FRAME);
         lastSendTime = now;
     }
@@ -316,6 +323,7 @@ namespace opbox
         serialProc->setFieldValue<uint8_t>(THRUSTER_STATE, thrusterState, now);
         serialProc->setFieldValue<uint8_t>(DIAGNOSTICS_STATE, diagState, now);
         serialProc->setFieldValue<uint8_t>(LEAK_STATE, leakState, now);
+        serialProc->setFieldValue<uint8_t>(NEXT_NOTIFICATION_UID, nextNotificationUid, now);
         serialProc->send(ROBOT_STATUS_FRAME);
         lastSendTime = now;
     }

@@ -1,6 +1,6 @@
 /**/opbox_ros_client:
   ros__parameters:
-    opbox_address: "opbox-ts"
+    opbox_address: "opbox"
     opbox_port: 10510
 
     danger_states:

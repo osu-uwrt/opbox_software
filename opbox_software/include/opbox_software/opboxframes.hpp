@@ -26,6 +26,7 @@ namespace opbox
         NOTIFICATION_TYPE,
         NOTIFICATION_UID,
         ACKED_NOTIFICATION_UID,
+        NEXT_NOTIFICATION_UID,
         NOTIFICATION_DESCRIPTION
     };
 
@@ -121,6 +122,7 @@ namespace opbox
                 { THRUSTER_STATE, 1 },
                 { DIAGNOSTICS_STATE, 1 },
                 { LEAK_STATE, 1 },
+                { NEXT_NOTIFICATION_UID, 1},
                 { FIELD_CHECKSUM, 2 }
             })
         },
@@ -130,6 +132,7 @@ namespace opbox
                 { FIELD_SYNC, sizeof(OPBOX_SYNC) },
                 { FIELD_FRAME, 1 },
                 { KILL_BUTTON_STATE, 1 },
+                { NEXT_NOTIFICATION_UID, 1},
                 { FIELD_CHECKSUM, 2 }
             })
         },

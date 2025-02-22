@@ -40,7 +40,7 @@ namespace opbox
 
         ~OpboxRobotLink();
 
-        static NotificationUid getNextNotificationUid(void);
+        NotificationUid getNextNotificationUid(void);
         bool connected(void);
         bool sendNotification(
             const NotificationType& type,
@@ -60,6 +60,7 @@ namespace opbox
         serial_library::SerialProcessor::UniquePtr serialProc;
         const OpboxFrameId bumpFrameId;
         std::chrono::time_point<std::chrono::system_clock> lastSendTime;
+        NotificationUid nextNotificationUid;
 
         private:
         serial_library::SerialProcessorCallbacks getCallbacks(void);
@@ -72,7 +73,6 @@ namespace opbox
         bool waitForAck(const NotificationUid& uid, const std::chrono::milliseconds& timeout);
         void threadFunc(void);
 
-        static NotificationUid nextNotificationUid;
         std::set<NotificationUid> handledUids;
 
         const NotificationHandler handleNotification;
