@@ -132,7 +132,7 @@ namespace opbox
                 { FIELD_SYNC, sizeof(OPBOX_SYNC) },
                 { FIELD_FRAME, 1 },
                 { KILL_BUTTON_STATE, 1 },
-                { NEXT_NOTIFICATION_UID, 1},
+                { NEXT_NOTIFICATION_UID, sizeof(NotificationUid) },
                 { FIELD_CHECKSUM, 2 }
             })
         },
@@ -142,7 +142,7 @@ namespace opbox
                 { FIELD_SYNC, sizeof(OPBOX_SYNC) },
                 { FIELD_FRAME, 1 },
                 { NOTIFICATION_TYPE, 1 },
-                { NOTIFICATION_UID, 1 },
+                { NOTIFICATION_UID, sizeof(NotificationUid) },
                 { NOTIFICATION_SENSOR_NAME, 16 },
                 { NOTIFICATION_DESCRIPTION, 63 },
                 { FIELD_CHECKSUM, 2 }
@@ -153,7 +153,7 @@ namespace opbox
             serial_library::assembleSerialFrame({
                 { FIELD_SYNC, sizeof(OPBOX_SYNC) },
                 { FIELD_FRAME, 1 },
-                { ACKED_NOTIFICATION_UID, 1 },
+                { ACKED_NOTIFICATION_UID, sizeof(NotificationUid) },
                 { FIELD_CHECKSUM, 2 }
             })
         }
