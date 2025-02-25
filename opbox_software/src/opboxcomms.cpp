@@ -63,6 +63,7 @@ namespace opbox
         serialProc->setFieldValue<DiagnosticState>(DIAGNOSTICS_STATE, DiagnosticState::DIAGNOSTICS_OK, now);
         serialProc->setFieldValue<LeakState>(LEAK_STATE, LeakState::OK, now);
         serialProc->setFieldValue<KillSwitchState>(KILL_BUTTON_STATE, KillSwitchState::KILLED, now);
+        serialProc->setFieldValue<uid_t>(NEXT_NOTIFICATION_UID, 0, now);
 
         thread = std::make_unique<std::thread>(std::bind(&OpboxRobotLink::threadFunc, this));
     }
