@@ -63,9 +63,11 @@ namespace opbox
         serialProc->setFieldValue<DiagnosticState>(DIAGNOSTICS_STATE, DiagnosticState::DIAGNOSTICS_OK, now);
         serialProc->setFieldValue<LeakState>(LEAK_STATE, LeakState::OK, now);
         serialProc->setFieldValue<KillSwitchState>(KILL_BUTTON_STATE, KillSwitchState::KILLED, now);
-        serialProc->setFieldValue<uid_t>(NEXT_NOTIFICATION_UID, 0, now);
+        serialProc->setFieldValue<NotificationUid>(NEXT_NOTIFICATION_UID, 0, now);
+        serialProc->setFieldValue<NotificationUid>(ACKED_NOTIFICATION_UID, 0, now);
 
         thread = std::make_unique<std::thread>(std::bind(&OpboxRobotLink::threadFunc, this));
+        OPBOX_LOG_DEBUG("Next notification uid is %d", nextNotificationUid);
     }
 
 
@@ -82,6 +84,7 @@ namespace opbox
 
     NotificationUid OpboxRobotLink::getNextNotificationUid()
     {
+        OPBOX_LOG_DEBUG("Generated notification UID %d", nextNotificationUid);
         return nextNotificationUid++;
     }
 
@@ -104,12 +107,15 @@ namespace opbox
         auto startTime = std::chrono::system_clock::now();
 
         NotificationUid uid = getNextNotificationUid();
+        OPBOX_LOG_DEBUG("Sending notification for sensor %s with UID %d", sensor.c_str(), uid);
+
         bool acked = false;
         while(!acked && 
             std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now() - startTime) < timeout)
         {
             trySendNotificationToRemote(uid, type, sensor, desc);
             acked = waitForAck(uid, 50ms);
+            OPBOX_LOG_DEBUG("Notification sent and %s acknowledged", (acked ? "" : "not"));
         }
 
         return acked;
@@ -153,9 +159,10 @@ namespace opbox
                 );
 
                 {
-                    uid_t remotesNextNotUid = serialProc->getFieldValue<uid_t>(NOTIFICATION_UID);
+                    NotificationUid remotesNextNotUid = serialProc->getFieldValue<NotificationUid>(NEXT_NOTIFICATION_UID);
                     if(remotesNextNotUid > nextNotificationUid)
                     {
+                        OPBOX_LOG_DEBUG("Received new next notification uid %d", remotesNextNotUid);
                         nextNotificationUid = remotesNextNotUid;
                     }
                 }
@@ -170,9 +177,10 @@ namespace opbox
                 );
 
                 {
-                    uid_t remotesNextNotUid = serialProc->getFieldValue<uid_t>(NOTIFICATION_UID);
+                    NotificationUid remotesNextNotUid = serialProc->getFieldValue<NotificationUid>(NEXT_NOTIFICATION_UID);
                     if(remotesNextNotUid > nextNotificationUid)
                     {
+                        OPBOX_LOG_DEBUG("Received new next notification uid %d", remotesNextNotUid);
                         nextNotificationUid = remotesNextNotUid;
                     }
                 }
@@ -223,13 +231,17 @@ namespace opbox
     {
         auto startTime = std::chrono::system_clock::now();
         std::this_thread::sleep_for(1ms);
-        bool acked = (NotificationUid) serialProc->getFieldValue<uint8_t>(ACKED_NOTIFICATION_UID) == uid;
+        uint8_t uidValue = serialProc->getFieldValue<uint8_t>(ACKED_NOTIFICATION_UID);
+        bool acked = (NotificationUid) uidValue == uid;
         
         while(std::chrono::duration_cast<std::chrono::milliseconds>(
             std::chrono::system_clock::now() - startTime) < timeout && !acked)
         {
-            acked = (NotificationUid) serialProc->getFieldValue<uint8_t>(ACKED_NOTIFICATION_UID) == uid;
+            uidValue = serialProc->getFieldValue<uint8_t>(ACKED_NOTIFICATION_UID);
+            acked = (NotificationUid) uidValue == uid;
         }
+
+        OPBOX_LOG_DEBUG("Done waiting for acknowledgement; target uid: %d, recvd uid %d, acked: %s", uid, uidValue, (acked ? "yes" : "no"));
 
         return acked;
     }
@@ -291,7 +303,7 @@ namespace opbox
         OPBOX_LOG_DEBUG("Sending opbox state with kill button state %d", state);
         auto now = std::chrono::system_clock::now();
         serialProc->setFieldValue<uint8_t>(KILL_BUTTON_STATE, state, now);
-        serialProc->setFieldValue<uint8_t>(NEXT_NOTIFICATION_UID, nextNotificationUid, now);
+        serialProc->setFieldValue<NotificationUid>(NEXT_NOTIFICATION_UID, nextNotificationUid, now);
         serialProc->send(OPBOX_STATUS_FRAME);
         lastSendTime = now;
     }
@@ -334,7 +346,7 @@ namespace opbox
         serialProc->setFieldValue<uint8_t>(THRUSTER_STATE, thrusterState, now);
         serialProc->setFieldValue<uint8_t>(DIAGNOSTICS_STATE, diagState, now);
         serialProc->setFieldValue<uint8_t>(LEAK_STATE, leakState, now);
-        serialProc->setFieldValue<uint8_t>(NEXT_NOTIFICATION_UID, nextNotificationUid, now);
+        serialProc->setFieldValue<NotificationUid>(NEXT_NOTIFICATION_UID, nextNotificationUid, now);
         serialProc->send(ROBOT_STATUS_FRAME);
         lastSendTime = now;
     }
