@@ -57,6 +57,7 @@ class OpboxRosClient : public rclcpp::Node
             std::bind(&OpboxRosClient::handleNewConnectionState, this, _1));
         
         //ROS stuff
+        timer = create_wall_timer(250ms, std::bind(&OpboxRosClient::handleTimer, this));
         killButtonPublisher = create_publisher<riptide_msgs2::msg::KillSwitchReport>(KILL_BUTTON_TOPIC, 10);
         diagnosticSub = create_subscription<diagnostic_msgs::msg::DiagnosticArray>(
             DIAGNOSTICS_TOPIC, 10, std::bind(&OpboxRosClient::diagStatusCb, this, _1));
@@ -152,6 +153,11 @@ class OpboxRosClient : public rclcpp::Node
         return dangerStates;
     }
 
+    void handleTimer()
+    {
+        opboxLink->sendRobotState(opbox::KillSwitchState::KILLED, opbox::ThrusterState::IDLE, opbox::DiagnosticState::DIAGNOSTICS_OK, opbox::LeakState::OK);
+    }
+
     void handleNotification(const opbox::NotificationType& type, const std::string& sensor, const std::string& desc)
     {
         RCLCPP_INFO(get_logger(), 
@@ -226,6 +232,7 @@ class OpboxRosClient : public rclcpp::Node
 
     DangerStateArray dangerStates;
     opbox::OpboxLink::UniquePtr opboxLink;
+    rclcpp::TimerBase::SharedPtr timer;
     rclcpp::Subscription<diagnostic_msgs::msg::DiagnosticArray>::SharedPtr diagnosticSub;
     rclcpp::Publisher<riptide_msgs2::msg::KillSwitchReport>::SharedPtr killButtonPublisher;
     rclcpp::Service<SendOpboxNotification>::SharedPtr sendOpboxNotificationSrv;
