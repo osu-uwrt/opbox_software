@@ -84,8 +84,10 @@ namespace opbox
 
     NotificationUid OpboxRobotLink::getNextNotificationUid()
     {
-        OPBOX_LOG_DEBUG("Generated notification UID %d", nextNotificationUid);
-        return nextNotificationUid++;
+        NotificationUid retVal = ++nextNotificationUid;
+        OPBOX_LOG_DEBUG("Generated notification UID %d", retVal);
+
+        return retVal;
     }
 
 
@@ -160,6 +162,7 @@ namespace opbox
 
                 {
                     NotificationUid remotesNextNotUid = serialProc->getFieldValue<NotificationUid>(NEXT_NOTIFICATION_UID);
+                    OPBOX_LOG_DEBUG("remotes next not uid %d", remotesNextNotUid);
                     if(remotesNextNotUid > nextNotificationUid)
                     {
                         OPBOX_LOG_DEBUG("Received new next notification uid %d", remotesNextNotUid);
@@ -178,6 +181,7 @@ namespace opbox
 
                 {
                     NotificationUid remotesNextNotUid = serialProc->getFieldValue<NotificationUid>(NEXT_NOTIFICATION_UID);
+                    OPBOX_LOG_DEBUG("remotes next not uid %d", remotesNextNotUid);
                     if(remotesNextNotUid > nextNotificationUid)
                     {
                         OPBOX_LOG_DEBUG("Received new next notification uid %d", remotesNextNotUid);
@@ -346,6 +350,7 @@ namespace opbox
         serialProc->setFieldValue<uint8_t>(THRUSTER_STATE, thrusterState, now);
         serialProc->setFieldValue<uint8_t>(DIAGNOSTICS_STATE, diagState, now);
         serialProc->setFieldValue<uint8_t>(LEAK_STATE, leakState, now);
+        OPBOX_LOG_DEBUG("sending next notification id %d", nextNotificationUid);
         serialProc->setFieldValue<NotificationUid>(NEXT_NOTIFICATION_UID, nextNotificationUid, now);
         serialProc->send(ROBOT_STATUS_FRAME);
         lastSendTime = now;

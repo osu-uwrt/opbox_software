@@ -122,7 +122,7 @@ namespace opbox
                 { THRUSTER_STATE, 1 },
                 { DIAGNOSTICS_STATE, 1 },
                 { LEAK_STATE, 1 },
-                { NEXT_NOTIFICATION_UID, 1},
+                { NEXT_NOTIFICATION_UID, sizeof(NotificationUid) },
                 { FIELD_CHECKSUM, 2 }
             })
         },
