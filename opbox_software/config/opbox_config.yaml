@@ -1,6 +1,6 @@
 opbox_config:
   # clients, in priority order. Will connect on port specified by client_port
-  client: brach-laptop
+  client: "192.168.5.1"
   client_port: 10510
   
   # diagnostics server settings
