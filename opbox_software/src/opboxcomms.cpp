@@ -160,6 +160,7 @@ namespace opbox
 
                 {
                     NotificationUid remotesNextNotUid = serialProc->getFieldValue<NotificationUid>(NEXT_NOTIFICATION_UID);
+                    OPBOX_LOG_DEBUG("Got next remote not id %d", remotesNextNotUid);
                     if(remotesNextNotUid > nextNotificationUid)
                     {
                         OPBOX_LOG_DEBUG("Received new next notification uid %d", remotesNextNotUid);
