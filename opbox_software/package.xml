@@ -12,6 +12,8 @@
   <test_depend>ament_lint_auto</test_depend>
   <test_depend>ament_lint_common</test_depend>
 
+  <depend>pkg-config</depend>
+  <depend>libnotify</depend>
   <depend>serial_library</depend>
 
   <export>

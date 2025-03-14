@@ -143,7 +143,7 @@ namespace opbox
                 { FIELD_FRAME, 1 },
                 { NOTIFICATION_TYPE, 1 },
                 { NOTIFICATION_UID, sizeof(NotificationUid) },
-                { NOTIFICATION_SENSOR_NAME, 16 },
+                { NOTIFICATION_SENSOR_NAME, 63 },
                 { NOTIFICATION_DESCRIPTION, 63 },
                 { FIELD_CHECKSUM, 2 }
             })

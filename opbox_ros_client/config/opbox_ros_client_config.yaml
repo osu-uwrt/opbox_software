@@ -3,15 +3,53 @@
     opbox_address: "opbox"
     opbox_port: 10510
 
+    #
+    # Diagnostic Statuses:
+    #  0 = OK
+    #  1 = WARN
+    #  2 = ERROR
+    #  3 = STALE
+    #
+    # Opbox Statuses
+    #  0 = WARN
+    #  1 = ERROR
+    #  2 = FATAL (ONLY USE FOR LEAK)
+    #
+
     danger_states:
       dangerstate0:
-        diagnostic_name: something
-        diagnostic_status: 2
-        minimum_num_msgs: 8
+        diagnostic_name: "sensor_monitor: Gyro"
+        diagnostic_status: 1
+        minimum_num_msgs: 1
         opbox_status: 0
       dangerstate1:
-        diagnostic_name: "firmware_monitor: Smart Battery Housing Port"
+        diagnostic_name: "sensor_monitor: Gyro"
         diagnostic_status: 2
-        minimum_num_msgs: 5
+        minimum_num_msgs: 1
+        opbox_status: 1
+      dangerstate2:
+        diagnostic_name: "sensor_monitor: DVL Sensor"
+        diagnostic_status: 1
+        minimum_num_msgs: 1
         opbox_status: 0
+      dangerstate3:
+        diagnostic_name: "sensor_monitor: Depth Sensor"
+        diagnostic_status: 2
+        minimum_num_msgs: 1
+        opbox_status: 1
+      dangerstate4:
+        diagnostic_name: "zed_node: ZED Diagnostic"
+        diagnostic_status: 2
+        minimum_num_msgs: 1
+        opbox_status: 1
+      dangerstate5:
+        diagnostic_name: "computer_monitor: Core Temperature"
+        diagnostic_status: 2
+        minimum_num_msgs: 1
+        opbox_status: 1
+      dangerstate6:
+        diagnostic_name: "ekf_localization_node: Filter diagnostic updater"
+        diagnostic_status: 1
+        minimum_num_msgs: 1
+        opbox_status: 1
       

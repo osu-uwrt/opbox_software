@@ -9,17 +9,13 @@ def generate_launch_description():
             package="opbox_ros_client",
             executable="opbox_ros_client",
             name="opbox_ros_client",
-            output="screen",
+            output="log",
             parameters=[
                 os.path.join(
                     get_package_share_directory("opbox_ros_client"),
                     "config",
                     "opbox_ros_client_config.yaml"
                 ),
-                
-                {
-                    "opbox_address" : "localhost"
-                }
             ]
         )
     ])

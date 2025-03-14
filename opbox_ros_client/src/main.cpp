@@ -73,7 +73,7 @@ class OpboxRosClient : public rclcpp::Node
 
     DangerStateArray readDangerStates(void)
     {
-        OPBOX_LOG_DEBUG("Reading diagnostic states");
+        RCLCPP_INFO(get_logger(), "Reading diagnostic danger states");
         DangerStateArray dangerStates;
         int dangerStateIdx = 0;
         
@@ -127,7 +127,7 @@ class OpboxRosClient : public rclcpp::Node
             haveOpboxStatus = ds.opboxStatus != -1;
             haveAllParams = haveName && haveStatus && haveMinNumMsgs && haveOpboxStatus;
 
-            OPBOX_LOG_DEBUG("Have params for danger state %d: %s. name: %s, status: %s, minMsgs: %s, opboxStatus: %s", 
+            RCLCPP_INFO(get_logger(), "Have params for danger state %d: %s. name: %s, status: %s, minMsgs: %s, opboxStatus: %s", 
                 dangerStateIdx, 
                 haveAllParams ? "yes" : "no",
                 haveName ? "yes" : "no",
@@ -137,7 +137,7 @@ class OpboxRosClient : public rclcpp::Node
             
             if(haveAllParams)
             {
-                OPBOX_LOG_DEBUG("Read danger state %s, %d, %d, %s", 
+                RCLCPP_INFO(get_logger(), "Read danger state %s, %d, %d, %s", 
                     ds.diagName.c_str(), 
                     ds.diagStatus, 
                     ds.minMsgs, 
@@ -149,7 +149,7 @@ class OpboxRosClient : public rclcpp::Node
             dangerStateIdx++;
         }
 
-        OPBOX_LOG_DEBUG("Read %d danger states", dangerStates.size());
+        RCLCPP_INFO(get_logger(), "Read %d danger states", dangerStates.size());
         return dangerStates;
     }
 
@@ -167,11 +167,11 @@ class OpboxRosClient : public rclcpp::Node
 
     void handleNewKillButtonState(const opbox::KillSwitchState& killButtonState)
     {
-        riptide_msgs2::msg::KillSwitchReport ksr;
-        ksr.sender_id = riptide_msgs2::msg::KillSwitchReport::KILL_SWITCH_TOPSIDE_BUTTON;
-        ksr.switch_asserting_kill = killButtonState == opbox::KillSwitchState::KILLED;
-        ksr.switch_needs_update = false;
-        killButtonPublisher->publish(ksr);
+        // riptide_msgs2::msg::KillSwitchReport ksr;
+        // ksr.sender_id = riptide_msgs2::msg::KillSwitchReport::KILL_SWITCH_TOPSIDE_BUTTON;
+        // ksr.switch_asserting_kill = killButtonState == opbox::KillSwitchState::KILLED;
+        // ksr.switch_needs_update = false;
+        // killButtonPublisher->publish(ksr);
     }
 
     void handleNewConnectionState(const bool& connected)
@@ -214,10 +214,10 @@ class OpboxRosClient : public rclcpp::Node
                     if(dangerStates.at(status.name)._msgsReceived >= dangerStates.at(status.name).minMsgs && !dangerStates.at(status.name)._dangerStateReached)
                     {
                         //danger state reached, ping opbox
-                        OPBOX_LOG_ERROR("Danger state %s %d reached! Sending notification", status.name, status.level);
-                        if(!opboxLink->sendNotification(dangerStates.at(status.name).opboxStatus, status.name.c_str(), status.message))
+                        RCLCPP_ERROR(get_logger(), "Danger state %s %d reached! Sending notification", status.name.c_str(), status.level);
+                        if(!opboxLink->sendNotification(dangerStates.at(status.name).opboxStatus, status.name, status.message))
                         {
-                            OPBOX_LOG_ERROR("FAILED TO SEND DANGER NOTIFICATION TO OPBOX");
+                            RCLCPP_ERROR(get_logger(), "FAILED TO SEND DANGER NOTIFICATION TO OPBOX");
                         }
                         dangerStates.at(status.name)._dangerStateReached = true;
                     }
